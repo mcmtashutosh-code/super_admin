@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Super-Admin — CBT Institutes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a1424; --card:#101e2d; --field:#0f2035; --line:#1e3a5f; --line-soft:#16283e;
+    --accent:#16a085; --accent-text:#5dcaa5; --text:#e8f0f7; --text-dim:#8fb3cf; --text-mute:#4a7fa5;
+    --warn:#f39c12; --danger:#e74c3c; --radius:14px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background:var(--bg); color:var(--text); font-size:14px; line-height:1.5;
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+  }
+  h1,h2,h3{ font-family:Sora, Inter, sans-serif; margin:0; }
+  .wrap{ max-width:880px; margin:0 auto; padding:20px 16px 60px; }
+  .bar{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:22px; }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .badge{ background:var(--danger); color:#fff; font-weight:700; font-size:12px; letter-spacing:.04em; padding:5px 10px; border-radius:7px; }
+  .brand span{ font-family:Sora, sans-serif; font-weight:600; font-size:16px; }
+  .card{ background:var(--card); border:1px solid var(--line-soft); border-radius:var(--radius); padding:18px; margin-bottom:14px; }
+  .muted{ color:var(--text-dim); font-size:13px; }
+  label{ display:block; font-size:12px; font-weight:600; color:var(--text-dim); text-transform:uppercase; letter-spacing:.04em; margin:12px 0 5px; }
+  input{
+    width:100%; background:var(--field); border:1px solid var(--line); color:var(--text);
+    border-radius:9px; padding:10px 12px; font:inherit; font-size:14px;
+  }
+  input:focus{ outline:none; border-color:var(--accent); }
+  input[type=color]{ padding:2px; height:40px; width:60px; }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:0 14px; }
+  .btn{
+    border:1px solid var(--line); background:transparent; color:var(--text);
+    border-radius:9px; padding:9px 14px; font:inherit; font-weight:600; font-size:13px; cursor:pointer;
+  }
+  .btn:hover{ border-color:var(--accent); }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .btn-primary{ background:var(--accent); border-color:var(--accent); color:#04342c; }
+  .btn-danger{ border-color:var(--danger); color:#ff8a7d; }
+  .btn-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .err{ color:#ff8a7d; font-size:13px; min-height:18px; margin-top:8px; }
+  .stats{ display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px; }
+  .stat{ background:var(--card); border:1px solid var(--line-soft); border-radius:12px; padding:12px; }
+  .stat b{ display:block; font-family:Sora, sans-serif; font-size:22px; }
+  .stat span{ color:var(--text-dim); font-size:12px; }
+  .inst-head{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .swatch{ width:14px; height:14px; border-radius:4px; border:1px solid var(--line); flex:none; }
+  .logo{ height:32px; width:auto; max-width:80px; border-radius:6px; object-fit:contain; background:#fff1; }
+  .pill{ font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; }
+  .pill.active{ background:#16a08533; color:var(--accent-text); }
+  .pill.suspended{ background:#e74c3c33; color:#ff8a7d; }
+  .nums{ display:flex; flex-wrap:wrap; gap:14px; margin-top:10px; color:var(--text-dim); font-size:13px; }
+  .nums b{ color:var(--text); }
+  .link-row{ display:flex; gap:8px; margin-top:10px; }
+  .link-row input{ font-size:12px; color:var(--text-dim); }
+  .hidden{ display:none !important; }
+  .pw-wrap{ position:relative; }
+  .pw-wrap input{ padding-right:70px; }
+  .pw-toggle{
+    position:absolute; right:6px; top:50%; transform:translateY(-50%);
+    background:transparent; border:1px solid var(--line); color:var(--text-dim);
+    border-radius:7px; padding:4px 8px; font:inherit; font-size:11px; font-weight:700; cursor:pointer;
+  }
+  .pw-toggle:hover{ border-color:var(--accent); color:var(--text); }
+  .toast{
+    position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);
+    background:#16283e; border:1px solid var(--line); padding:10px 16px; border-radius:10px; font-size:13px;
+    max-width:90vw; z-index:10;
+  }
+  .toast.ok{ border-color:var(--accent); } .toast.err{ border-color:var(--danger); }
+  .warn{ color:var(--warn); font-size:12px; margin-top:4px; }
+  details summary{ cursor:pointer; font-family:Sora, sans-serif; font-weight:600; }
+  @media (max-width:520px){ .stats{ grid-template-columns:1fr 1fr 1fr; } .stat b{ font-size:18px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="bar">
+    <div class="brand"><span class="badge">SUPER</span><span>Institutes Control</span></div>
+    <button class="btn hidden" id="btn-logout">Logout</button>
+  </div>
+
+  <!-- ================= LOGIN ================= -->
+  <div id="view-login" class="card" style="max-width:420px; margin:40px auto;">
+    <h2 style="font-size:18px;">Super-admin login</h2>
+    <p class="muted">Sirf platform owner ke liye. 5 galat koshish par 15 minute ka lock.</p>
+    <label>Username</label>
+    <input id="in-user" autocomplete="username">
+    <label>Password</label>
+    <input id="in-pass" type="password" autocomplete="current-password">
+    <div class="err" id="login-err"></div>
+    <button class="btn btn-primary" id="btn-login" style="width:100%; margin-top:6px;">Login</button>
+  </div>
+
+  <!-- ================= MAIN ================= -->
+  <div id="view-main" class="hidden">
+
+    <div class="stats">
+      <div class="stat"><b id="st-inst">–</b><span>Institutes</span></div>
+      <div class="stat"><b id="st-active">–</b><span>Active</span></div>
+      <div class="stat"><b id="st-students">–</b><span>Total students</span></div>
+    </div>
+
+    <div class="card">
+      <label style="margin-top:0;">Student portal ka link (ek baar daaliye — database mein save hota hai)</label>
+      <div style="display:flex; gap:8px;">
+        <input id="in-portal-url" placeholder="jaise https://mcmtashutosh-code.github.io/portal-repo/">
+        <button class="btn" id="btn-save-portal" style="flex:none;">💾 Save</button>
+      </div>
+      <p class="muted" style="margin:6px 0 0;">Isse har institute ka gupt link banta hai: <code>portal-link?inst=CODE-XXXXXX</code>. Institute admins ko bhi ye link unke dashboard mein dikhta hai.</p>
+    </div>
+
+    <div class="card">
+      <details id="account-box">
+        <summary>👤 Mera account (username / password badliye)</summary>
+        <div class="grid">
+          <div><label>Abhi ka password *</label><input id="a-old" type="password" autocomplete="current-password"></div>
+          <div><label>Naya username *</label><input id="a-user" autocomplete="username"></div>
+          <div><label>Naya password * (8+ akshar, letters + numbers)</label><input id="a-new" type="password" autocomplete="new-password"></div>
+          <div><label>Naya password dobara *</label><input id="a-new2" type="password" autocomplete="new-password"></div>
+        </div>
+        <div class="err" id="account-err"></div>
+        <button class="btn btn-primary" id="btn-account" style="margin-top:6px;">Save</button>
+      </details>
+    </div>
+
+    <div class="card">
+      <details id="create-box">
+        <summary>➕ Naya institute banaiye</summary>
+        <div class="grid">
+          <div><label>Institute code *</label><input id="c-code" placeholder="SHARMA (A-Z, 0-9)" maxlength="20"></div>
+          <div><label>Institute ka poora naam *</label><input id="c-name" placeholder="Sharma Coaching Centre"></div>
+          <div><label>Chhota naam (portal header)</label><input id="c-short" placeholder="Sharma Coaching"></div>
+          <div><label>Max students (khali = unlimited)</label><input id="c-max" type="number" min="0"></div>
+          <div><label>Admin ID *</label><input id="c-admin" placeholder="sharma_admin"></div>
+          <div><label>Admin password * (min 6)</label><input id="c-pass" type="text"></div>
+          <div><label>Contact phone</label><input id="c-phone"></div>
+          <div><label>Contact email</label><input id="c-email" type="email"></div>
+          <div><label>Logo link (https://...)</label><input id="c-logo" placeholder="https://..."></div>
+          <div>
+            <label>Portal ka rang</label>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <input id="c-color" type="color" value="#16a085">
+              <label style="margin:0; text-transform:none; font-weight:500; display:flex; gap:6px; align-items:center;">
+                <input id="c-color-on" type="checkbox" style="width:auto;"> rang set karo
+              </label>
+            </div>
+            <div class="warn" id="c-color-warn"></div>
+          </div>
+        </div>
+        <div class="err" id="create-err"></div>
+        <button class="btn btn-primary" id="btn-create" style="margin-top:6px;">Institute banaiye</button>
+      </details>
+    </div>
+
+    <div class="card">
+      <details id="move-box">
+        <summary>🔀 Student ko doosre institute mein bhejo</summary>
+        <p class="muted" style="margin:10px 0 0;">Jab koi student galat link se register ho gaya ho. Pehle mobile se dhundhiye, jaankari dekhiye, phir move kariye.</p>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <input id="m-mobile" type="tel" inputmode="numeric" maxlength="10" placeholder="Student ka mobile number">
+          <button class="btn" id="btn-find" style="flex:none;">🔍 Dhundho</button>
+        </div>
+        <div class="err" id="move-err"></div>
+        <div id="move-result" class="hidden" style="margin-top:6px; border-top:1px solid var(--line-soft); padding-top:10px;">
+          <div id="m-info"></div>
+          <label>Kis institute mein bhejna hai?</label>
+          <select id="m-target" style="width:100%; background:var(--field); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:10px 12px; font:inherit;"></select>
+          <p class="warn" style="margin-top:10px;">Naye institute mein <b>sirf account</b> jayega (naam, mobile, password, email).<br>Upar dikhi <b>poori history DELETE</b> ho jayegi — exam results, practice, mock tests, feedback, messages, challenge points. Ye wapas nahi aayegi.</p>
+          <label style="text-transform:none; font-weight:500; display:flex; gap:8px; align-items:flex-start; color:var(--text);">
+            <input id="m-agree" type="checkbox" style="width:auto; margin-top:3px;">
+            Main samajhta hoon ki is student ki purani saari history hamesha ke liye delete ho jayegi.
+          </label>
+          <button class="btn btn-danger" id="btn-move" style="margin-top:6px;" disabled>🔀 History delete karke move kariye</button>
+        </div>
+      </details>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin:22px 0 10px;">
+      <h3 style="font-size:16px;">Saare institutes</h3>
+      <button class="btn" id="btn-refresh">🔄 Refresh</button>
+    </div>
+    <div id="inst-list"><p class="muted">Loading...</p></div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script>
+const SUPABASE_URL = "https://iyzujwixwfydmkzmhrxo.supabase.co";
+const SUPABASE_KEY = "sb_publishable_4t1qso9eT9lNU_aGnS8hiQ_zX3EGBXd";
+
+/* Har password box mein SHOW/HIDE button */
+document.querySelectorAll('input[type="password"]').forEach(inp => {
+  const wrap = document.createElement('div');
+  wrap.className = 'pw-wrap';
+  inp.parentNode.insertBefore(wrap, inp);
+  wrap.appendChild(inp);
+  const t = document.createElement('button');
+  t.type = 'button'; t.className = 'pw-toggle'; t.textContent = 'SHOW';
+  t.addEventListener('click', () => {
+    const showing = inp.type === 'text';
+    inp.type = showing ? 'password' : 'text';
+    t.textContent = showing ? 'SHOW' : 'HIDE';
+  });
+  wrap.appendChild(t);
+});
+
+let sa = null;            // { u, p } — sirf memory mein, kahin save nahi
+let institutes = [];
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+let toastTimer = null;
+function toast(msg, kind){
+  const t = $('toast'); t.textContent = msg; t.className = 'toast ' + (kind || '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 3500);
+}
+async function rpc(fn, body){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method:'POST',
+    headers:{ 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  return res.json();
+}
+function creds(){ return { p_username: sa.u, p_password: sa.p }; }
+function handleAuthError(r){
+  if (r && (r.error === 'invalid' || r.error === 'locked')){
+    logout();
+    $('login-err').textContent = r.error === 'locked'
+      ? 'Account 15 minute ke liye lock hai. Baad mein koshish kariye.'
+      : 'Session khatam. Dobara login kariye.';
+    return true;
+  }
+  return false;
+}
+function luminance(hex){
+  const n = parseInt(hex.slice(1), 16);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); });
+  return .2126 * c[0] + .7152 * c[1] + .0722 * c[2];
+}
+function colorWarning(hex){
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return '';
+  const L = luminance(hex);
+  if (L < .12) return '⚠ Ye rang bahut gehra hai — portal ke buttons ka text padhna mushkil ho sakta hai. Thoda halka rang chuniye.';
+  if (L > .75) return '⚠ Ye rang bahut halka hai — light mode mein kam dikhega.';
+  return '';
+}
+
+/* ---------------- LOGIN ---------------- */
+async function doLogin(){
+  const u = $('in-user').value.trim(), p = $('in-pass').value;
+  $('login-err').textContent = '';
+  if (!u || !p){ $('login-err').textContent = 'Username aur password daaliye.'; return; }
+  const btn = $('btn-login'); btn.disabled = true; btn.textContent = 'Checking...';
+  try{
+    const r = await rpc('sa_web_login', { p_username: u, p_password: p });
+    if (r && r.ok){
+      sa = { u, p };
+      $('in-pass').value = '';
+      $('view-login').classList.add('hidden');
+      $('view-main').classList.remove('hidden');
+      $('btn-logout').classList.remove('hidden');
+      loadList();
+    } else if (r && r.error === 'locked'){
+      $('login-err').textContent = 'Bahut galat koshish. 15 minute baad dobara try kariye.';
+    } else {
+      $('login-err').textContent = 'Galat username ya password.';
+    }
+  }catch(e){ $('login-err').textContent = 'Connection error.'; }
+  finally{ btn.disabled = false; btn.textContent = 'Login'; }
+}
+function logout(){
+  sa = null; institutes = [];
+  document.querySelectorAll('.pw-wrap input').forEach(i => { i.type = 'password'; });
+  document.querySelectorAll('.pw-toggle').forEach(b => b.textContent = 'SHOW');
+  $('view-main').classList.add('hidden');
+  $('view-login').classList.remove('hidden');
+  $('btn-logout').classList.add('hidden');
+  $('inst-list').innerHTML = '';
+}
+$('btn-login').addEventListener('click', doLogin);
+$('in-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+$('btn-logout').addEventListener('click', logout);
+
+/* ---------------- PORTAL URL ---------------- */
+function studentLink(inst){
+  const b = savedPortalUrl;
+  if (!b) return '(upar student portal ka link daal kar Save kariye)';
+  if (inst.code === 'VIDYAPATH' || !inst.join_key) return b;
+  return `${b}?inst=${encodeURIComponent(inst.join_key)}`;
+}
+let savedPortalUrl = '';
+$('btn-save-portal').addEventListener('click', async () => {
+  const btn = $('btn-save-portal'); btn.disabled = true;
+  try{
+    const r = await rpc('sa_web_set_portal_url', { ...creds(), p_url: $('in-portal-url').value.trim() });
+    if (handleAuthError(r)) return;
+    if (r && r.ok){
+      savedPortalUrl = r.portal_url || '';
+      $('in-portal-url').value = savedPortalUrl;
+      toast('Portal link save ho gaya.', 'ok');
+      renderList();
+    } else toast((r && r.error) || 'Save nahi ho paaya.', 'err');
+  }catch(_e){ toast('Connection error.', 'err'); }
+  finally{ btn.disabled = false; }
+});
+
+/* ---------------- LIST ---------------- */
+async function loadList(){
+  $('inst-list').innerHTML = '<p class="muted">Loading...</p>';
+  try{
+    const r = await rpc('sa_web_list', creds());
+    if (handleAuthError(r)) return;
+    if (!r || !r.ok){ $('inst-list').innerHTML = '<p class="muted">List nahi mil payi.</p>'; return; }
+    institutes = r.institutes || [];
+    savedPortalUrl = r.portal_url || '';
+    if (document.activeElement !== $('in-portal-url')) $('in-portal-url').value = savedPortalUrl;
+    renderList();
+  }catch(e){ $('inst-list').innerHTML = '<p class="muted">Connection error.</p>'; }
+}
+$('btn-refresh').addEventListener('click', loadList);
+
+function renderList(){
+  $('st-inst').textContent = institutes.length;
+  $('st-active').textContent = institutes.filter(i => i.status === 'active').length;
+  $('st-students').textContent = institutes.reduce((a, i) => a + Number(i.students || 0), 0);
+
+  if (!institutes.length){ $('inst-list').innerHTML = '<p class="muted">Koi institute nahi.</p>'; return; }
+  $('inst-list').innerHTML = institutes.map((i, idx) => `
+    <div class="card" data-idx="${idx}">
+      <div class="inst-head">
+        ${i.logo_url ? `<img class="logo" src="${esc(i.logo_url)}" alt="" onerror="this.style.display='none'">` : ''}
+        <div style="flex:1; min-width:180px;">
+          <div style="font-family:Sora,sans-serif; font-weight:600; font-size:15px;">${esc(i.name)}</div>
+          <div class="muted">Code: <b>${esc(i.code)}</b> · Admin: <b>${esc(i.admin_id || '-')}</b></div>
+        </div>
+        ${i.primary_color ? `<span class="swatch" style="background:${esc(i.primary_color)}" title="${esc(i.primary_color)}"></span>` : ''}
+        <span class="pill ${i.status === 'active' ? 'active' : 'suspended'}">${i.status === 'active' ? 'ACTIVE' : 'SUSPENDED'}</span>
+      </div>
+      <div class="nums">
+        <span>Students: <b>${i.students}</b>${i.max_students != null ? ` / ${i.max_students}` : ''}</span>
+        <span>Pending: <b>${i.pending}</b></span>
+        <span>Practice Q: <b>${i.practice_questions}</b></span>
+        <span>Exam Q: <b>${i.exam_questions}</b></span>
+      </div>
+      <div class="link-row">
+        <input readonly value="${esc(studentLink(i))}">
+        <button class="btn" data-act="copy">📋 Copy</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn" data-act="edit">✏️ Edit / Branding</button>
+        <button class="btn" data-act="reset">🔑 Admin password reset</button>
+        ${i.code === 'VIDYAPATH' ? '' : '<button class="btn" data-act="regen">🔄 Naya link banao</button>'}
+        ${i.code === 'VIDYAPATH' ? '' : (i.status === 'active'
+          ? '<button class="btn btn-danger" data-act="suspend">⏸ Suspend</button>'
+          : '<button class="btn" data-act="activate">▶ Activate</button>')}
+      </div>
+      <div class="edit-box hidden" style="margin-top:14px; border-top:1px solid var(--line-soft); padding-top:4px;">
+        <div class="grid">
+          <div><label>Poora naam *</label><input data-f="name" value="${esc(i.name)}"></div>
+          <div><label>Chhota naam</label><input data-f="short_name" value="${esc(i.short_name || '')}"></div>
+          <div><label>Max students (khali = unlimited)</label><input data-f="max_students" type="number" min="0" value="${i.max_students ?? ''}"></div>
+          <div><label>Contact phone</label><input data-f="contact_phone" value="${esc(i.contact_phone || '')}"></div>
+          <div><label>Contact email</label><input data-f="contact_email" value="${esc(i.contact_email || '')}"></div>
+          <div><label>Logo link (https://...)</label><input data-f="logo_url" value="${esc(i.logo_url || '')}"></div>
+          <div>
+            <label>Portal ka rang</label>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <input data-f="color" type="color" value="${esc(i.primary_color || '#16a085')}">
+              <label style="margin:0; text-transform:none; font-weight:500; display:flex; gap:6px; align-items:center;">
+                <input data-f="color_on" type="checkbox" style="width:auto;" ${i.primary_color ? 'checked' : ''}> rang set karo
+              </label>
+            </div>
+            <div class="warn" data-f="color_warn"></div>
+          </div>
+        </div>
+        <div class="err" data-f="err"></div>
+        <button class="btn btn-primary" data-act="save">💾 Save</button>
+      </div>
+    </div>`).join('');
+}
+
+$('inst-list').addEventListener('input', (e) => {
+  if (e.target.matches('input[data-f="color"]')){
+    const card = e.target.closest('.card');
+    card.querySelector('[data-f="color_warn"]').textContent = colorWarning(e.target.value);
+    card.querySelector('[data-f="color_on"]').checked = true;
+  }
+});
+
+$('inst-list').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-act]'); if (!btn) return;
+  const card = btn.closest('.card'); const inst = institutes[Number(card.dataset.idx)];
+  const act = btn.dataset.act;
+
+  if (act === 'copy'){
+    const val = card.querySelector('.link-row input').value;
+    try{ await navigator.clipboard.writeText(val); toast('Link copy ho gaya.', 'ok'); }
+    catch(_e){ card.querySelector('.link-row input').select(); toast('Link select ho gaya — Ctrl+C dabaiye.'); }
+    return;
+  }
+  if (act === 'edit'){ card.querySelector('.edit-box').classList.toggle('hidden'); return; }
+
+  if (act === 'regen'){
+    if (!confirm(`"${inst.name}" ka NAYA link banayein?\n\nPurana link turant band ho jayega. Jo students pehle se registered hain wo naye link se login karenge — isliye naya link institute ko zaroor bhejiye.`)) return;
+    btn.disabled = true;
+    try{
+      const r = await rpc('sa_web_regenerate_join_key', { ...creds(), p_code: inst.code });
+      if (handleAuthError(r)) return;
+      if (r && r.ok){ toast(`Naya link ban gaya: ...?inst=${r.join_key}`, 'ok'); loadList(); }
+      else toast((r && r.error) || 'Nahi ho paaya.', 'err');
+    }catch(_e){ toast('Connection error.', 'err'); }
+    finally{ btn.disabled = false; }
+    return;
+  }
+
+  if (act === 'suspend' || act === 'activate'){
+    const status = act === 'suspend' ? 'suspended' : 'active';
+    const msg = act === 'suspend'
+      ? `"${inst.name}" ko SUSPEND karein?\n\nUske students aur admin login nahi kar payenge. Data surakshit rahega.`
+      : `"${inst.name}" ko phir se ACTIVE karein?`;
+    if (!confirm(msg)) return;
+    btn.disabled = true;
+    try{
+      const r = await rpc('sa_web_set_status', { ...creds(), p_code: inst.code, p_status: status });
+      if (handleAuthError(r)) return;
+      if (r && r.ok){ toast(act === 'suspend' ? 'Suspend ho gaya.' : 'Active ho gaya.', 'ok'); loadList(); }
+      else toast((r && r.error) || 'Nahi ho paaya.', 'err');
+    }catch(_e){ toast('Connection error.', 'err'); }
+    finally{ btn.disabled = false; }
+    return;
+  }
+
+  if (act === 'reset'){
+    const adminId = (inst.admin_id || '').split(',')[0].trim();
+    if (!adminId){ toast('Is institute ka admin nahi mila.', 'err'); return; }
+    const np = prompt(`"${adminId}" ka naya password (kam se kam 6 akshar):`);
+    if (np == null) return;
+    if (np.trim().length < 6){ toast('Password kam se kam 6 akshar.', 'err'); return; }
+    try{
+      const r = await rpc('sa_web_reset_admin_password', { ...creds(), p_admin_id: adminId, p_new_password: np.trim() });
+      if (handleAuthError(r)) return;
+      if (r && r.ok) toast(`${adminId} ka password badal gaya. Admin ko naya password bata dijiye.`, 'ok');
+      else toast((r && r.error) || 'Nahi ho paaya.', 'err');
+    }catch(_e){ toast('Connection error.', 'err'); }
+    return;
+  }
+
+  if (act === 'save'){
+    const f = n => card.querySelector(`[data-f="${n}"]`);
+    const errEl = f('err'); errEl.textContent = '';
+    const maxRaw = f('max_students').value.trim();
+    const logo = f('logo_url').value.trim();
+    if (logo && !/^https:\/\//i.test(logo)){ errEl.textContent = 'Logo ka link https:// se shuru hona chahiye.'; return; }
+    btn.disabled = true;
+    try{
+      const r = await rpc('sa_web_update_institute', {
+        ...creds(), p_code: inst.code,
+        p_name: f('name').value.trim(), p_short_name: f('short_name').value.trim(),
+        p_max_students: maxRaw === '' ? null : Number(maxRaw),
+        p_contact_phone: f('contact_phone').value.trim(), p_contact_email: f('contact_email').value.trim(),
+        p_logo_url: logo, p_primary_color: f('color_on').checked ? f('color').value : ''
+      });
+      if (handleAuthError(r)) return;
+      if (r && r.ok){ toast('Save ho gaya.', 'ok'); loadList(); }
+      else errEl.textContent = (r && r.error) || 'Save nahi ho paaya.';
+    }catch(_e){ errEl.textContent = 'Connection error.'; }
+    finally{ btn.disabled = false; }
+  }
+});
+
+/* ---------------- MERA ACCOUNT ---------------- */
+$('account-box').addEventListener('toggle', () => {
+  if ($('account-box').open && sa) $('a-user').value = sa.u;
+});
+$('btn-account').addEventListener('click', async () => {
+  const errEl = $('account-err'); errEl.textContent = '';
+  const oldP = $('a-old').value, newU = $('a-user').value.trim(), newP = $('a-new').value, newP2 = $('a-new2').value;
+  if (!oldP){ errEl.textContent = 'Abhi ka password daaliye.'; return; }
+  if (newU.length < 4){ errEl.textContent = 'Username kam se kam 4 akshar.'; return; }
+  if (newP.length < 8 || !/[a-zA-Z]/.test(newP) || !/[0-9]/.test(newP)){ errEl.textContent = 'Naya password kam se kam 8 akshar ka ho, letters + numbers dono.'; return; }
+  if (newP !== newP2){ errEl.textContent = 'Dono naye password match nahi kar rahe.'; return; }
+  const btn = $('btn-account'); btn.disabled = true; btn.textContent = 'Save ho raha hai...';
+  try{
+    const r = await rpc('sa_web_change_credentials', { p_username: sa.u, p_password: oldP, p_new_username: newU, p_new_password: newP });
+    if (r && r.ok){
+      sa = { u: r.username, p: newP };
+      ['a-old','a-new','a-new2'].forEach(id => $(id).value = '');
+      document.querySelectorAll('.pw-wrap input').forEach(i => i.type = 'password');
+      document.querySelectorAll('.pw-toggle').forEach(b => b.textContent = 'SHOW');
+      $('account-box').open = false;
+      toast('Username/password badal gaya. Agli baar naye se login kariye.', 'ok');
+    } else if (r && r.error === 'invalid'){
+      errEl.textContent = 'Abhi ka password galat hai.';
+    } else if (r && r.error === 'locked'){
+      handleAuthError(r);
+    } else {
+      errEl.textContent = (r && r.error) || 'Save nahi ho paaya.';
+    }
+  }catch(_e){ errEl.textContent = 'Connection error.'; }
+  finally{ btn.disabled = false; btn.textContent = 'Save'; }
+});
+
+/* ---------------- STUDENT MOVE ---------------- */
+let moveStudent = null;
+let moveBlocked = true;
+$('m-agree').addEventListener('change', () => { $('btn-move').disabled = moveBlocked || !$('m-agree').checked; });
+$('btn-find').addEventListener('click', async () => {
+  const errEl = $('move-err'); errEl.textContent = '';
+  $('move-result').classList.add('hidden'); moveStudent = null;
+  const m = $('m-mobile').value.trim();
+  if (!/^\d{10}$/.test(m)){ errEl.textContent = 'Sahi 10 ank ka mobile number daaliye.'; return; }
+  const btn = $('btn-find'); btn.disabled = true;
+  try{
+    const r = await rpc('sa_web_find_student', { ...creds(), p_mobile: m });
+    if (handleAuthError(r)) return;
+    if (!r || !r.ok){ errEl.textContent = (r && r.error) || 'Student nahi mila.'; return; }
+    moveStudent = r.student;
+    const c = r.counts;
+    $('m-info').innerHTML = `
+      <div style="font-family:Sora,sans-serif; font-weight:600; font-size:15px;">${esc(r.student.name)} <span class="muted">(${esc(r.student.mobile)})</span></div>
+      <div class="muted">Abhi: <b>${esc(r.student.institute_name)}</b> (${esc(r.student.institute_code)}) · ${r.student.approved ? 'Approved' : 'Approval pending'}${r.student.email ? ' · ' + esc(r.student.email) : ''}</div>
+      <div class="nums">
+        <span>Exam results: <b>${c.exam_results}</b></span>
+        <span>Practice: <b>${c.practice_sessions}</b></span>
+        <span>Mock tests: <b>${c.mock_tests}</b></span>
+        <span>Challenge attempts: <b>${c.challenge_attempts}</b></span>
+        <span>Feedback: <b>${c.feedback}</b></span>
+        <span>Messages: <b>${c.messages}</b></span>
+      </div>
+      ${c.in_exam_now ? '<p class="err">⚠ Ye student abhi exam de raha hai — exam khatam hone ke baad move kariye.</p>' : ''}`;
+    const targets = institutes.filter(i => i.status === 'active' && i.code !== r.student.institute_code);
+    $('m-target').innerHTML = targets.length
+      ? targets.map(i => `<option value="${esc(i.code)}">${esc(i.name)} (${esc(i.code)})</option>`).join('')
+      : '<option value="">Koi doosra active institute nahi</option>';
+    moveBlocked = !targets.length || c.in_exam_now;
+    $('m-agree').checked = false;
+    $('btn-move').disabled = true;
+    $('move-result').classList.remove('hidden');
+  }catch(_e){ errEl.textContent = 'Connection error.'; }
+  finally{ btn.disabled = false; }
+});
+$('btn-move').addEventListener('click', async () => {
+  if (!moveStudent) return;
+  const code = $('m-target').value;
+  const target = institutes.find(i => i.code === code);
+  if (!code || !target) return;
+  if (!$('m-agree').checked) return;
+  if (!confirm(`PAKKA?\n\n${moveStudent.name} (${moveStudent.mobile}) ko "${moveStudent.institute_name}" se "${target.name}" mein bhejna hai.\n\nIski saari purani history (exam results, practice, mock tests, feedback, messages, challenge points) HAMESHA KE LIYE DELETE ho jayegi.`)) return;
+  const errEl = $('move-err'); errEl.textContent = '';
+  const btn = $('btn-move'); btn.disabled = true; btn.textContent = 'Move ho raha hai...';
+  try{
+    const r = await rpc('sa_web_move_student', { ...creds(), p_mobile: moveStudent.mobile, p_target_code: code });
+    if (handleAuthError(r)) return;
+    if (r && r.ok){
+      toast(`${moveStudent.name} ab ${r.to} mein hai. Purani history (${r.deleted_total} records) delete ho gayi.`, 'ok');
+      $('move-result').classList.add('hidden'); $('m-mobile').value = ''; moveStudent = null; moveBlocked = true; $('m-agree').checked = false;
+      loadList();
+    } else {
+      errEl.textContent = (r && r.error) || 'Move nahi ho paaya.';
+    }
+  }catch(_e){ errEl.textContent = 'Connection error.'; }
+  finally{ btn.textContent = '🔀 History delete karke move kariye'; btn.disabled = moveBlocked || !$('m-agree').checked; }
+});
+
+/* ---------------- CREATE ---------------- */
+$('c-color').addEventListener('input', () => {
+  $('c-color-warn').textContent = colorWarning($('c-color').value);
+  $('c-color-on').checked = true;
+});
+$('btn-create').addEventListener('click', async () => {
+  const errEl = $('create-err'); errEl.textContent = '';
+  const code = $('c-code').value.trim().toUpperCase();
+  const name = $('c-name').value.trim();
+  const adminId = $('c-admin').value.trim();
+  const pass = $('c-pass').value.trim();
+  const logo = $('c-logo').value.trim();
+  const maxRaw = $('c-max').value.trim();
+  if (!/^[A-Z0-9]{2,20}$/.test(code)){ errEl.textContent = 'Code sirf A-Z aur 0-9, 2 se 20 akshar.'; return; }
+  if (!name){ errEl.textContent = 'Institute ka naam zaroori hai.'; return; }
+  if (!adminId || pass.length < 6){ errEl.textContent = 'Admin ID aur kam se kam 6 akshar ka password zaroori hai.'; return; }
+  if (logo && !/^https:\/\//i.test(logo)){ errEl.textContent = 'Logo ka link https:// se shuru hona chahiye.'; return; }
+
+  const btn = $('btn-create'); btn.disabled = true; btn.textContent = 'Ban raha hai...';
+  try{
+    const r = await rpc('sa_web_create_institute', {
+      ...creds(), p_code: code, p_name: name, p_admin_id: adminId, p_admin_pass: pass,
+      p_short_name: $('c-short').value.trim() || null,
+      p_max_students: maxRaw === '' ? null : Number(maxRaw),
+      p_contact_phone: $('c-phone').value.trim(), p_contact_email: $('c-email').value.trim(),
+      p_logo_url: logo, p_primary_color: $('c-color-on').checked ? $('c-color').value : ''
+    });
+    if (handleAuthError(r)) return;
+    if (r && r.ok){
+      toast(`${name} ban gaya! Admin: ${adminId}`, 'ok');
+      ['c-code','c-name','c-short','c-max','c-admin','c-pass','c-phone','c-email','c-logo'].forEach(id => $(id).value = '');
+      $('c-color-on').checked = false; $('c-color-warn').textContent = '';
+      $('create-box').open = false;
+      loadList();
+    } else {
+      errEl.textContent = (r && r.error) || 'Institute nahi ban paaya.';
+    }
+  }catch(_e){ errEl.textContent = 'Connection error.'; }
+  finally{ btn.disabled = false; btn.textContent = 'Institute banaiye'; }
+});
+</script>
+</body>
+</html>
