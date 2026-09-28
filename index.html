@@ -232,8 +232,7 @@ document.querySelectorAll('input[type="password"]').forEach(inp => {
 
 /* ---------------- INSTALLABLE APP (PWA) ---------------- */
 if ('serviceWorker' in navigator){
-  const pageScope = window.location.pathname;            // works even if this file is renamed
-  navigator.serviceWorker.register('sa-sw.js', { scope: pageScope }).catch(() => {});
+  navigator.serviceWorker.register('sa-sw.js', { scope: './' }).catch(() => {});
 }
 let deferredInstall = null;
 window.addEventListener('beforeinstallprompt', (e) => {
