@@ -73,6 +73,21 @@
   table.report th, table.report td{ padding:8px 10px; border-bottom:1px solid var(--line-soft); text-align:right; white-space:nowrap; }
   table.report th:first-child, table.report td:first-child{ text-align:left; }
   table.report th{ color:var(--text-dim); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+  textarea{ width:100%; background:var(--field); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:10px 12px; font:inherit; font-size:14px; min-height:90px; resize:vertical; }
+  textarea:focus{ outline:none; border-color:var(--accent); }
+  .tk{ border:1px solid var(--line-soft); border-radius:12px; padding:12px 14px; margin-top:10px; cursor:pointer; }
+  .tk.unread{ border-color:var(--danger); }
+  .tk-top{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--text-dim); }
+  .tk-subj{ font-weight:600; margin-top:4px; }
+  .st{ font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; margin-left:auto; }
+  .st.open{ background:#3498db33; color:#5dade2; } .st.in_progress{ background:#f39c1233; color:#f5b041; }
+  .st.resolved{ background:#16a08533; color:#5dcaa5; } .st.closed{ background:#7f8c8d33; color:#aab7b8; }
+  .newdot{ background:var(--danger); color:#fff; font-size:10px; font-weight:700; padding:2px 6px; border-radius:8px; }
+  .msg{ border-radius:12px; padding:10px 12px; margin:8px 0; max-width:88%; white-space:pre-wrap; word-wrap:break-word; }
+  .msg.inst{ background:var(--field); border:1px solid var(--line-soft); }
+  .msg.me{ background:#16a08522; border:1px solid #16a08555; margin-left:auto; }
+  .msg .who{ font-size:11px; font-weight:700; color:var(--text-dim); margin-bottom:4px; }
+  .msg .when{ font-size:11px; color:var(--text-dim); margin-top:6px; }
   select.sel{ background:var(--field); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:9px 10px; font:inherit; }
   .nums{ display:flex; flex-wrap:wrap; gap:14px; margin-top:10px; color:var(--text-dim); font-size:13px; }
   .nums b{ color:var(--text); }
@@ -205,6 +220,45 @@
             I understand that this student's history will be permanently deleted.
           </label>
           <button class="btn btn-danger" id="btn-move" style="margin-top:6px;" disabled>🔀 Delete history and transfer</button>
+        </div>
+      </details>
+    </div>
+
+    <div class="card">
+      <details id="support-box">
+        <summary>📨 Support requests <span class="newdot hidden" id="sup-badge"></span></summary>
+        <div id="tk-list-wrap">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px;">
+            <select class="sel" id="tk-filter">
+              <option value="">All requests</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In progress</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+            </select>
+            <button class="btn" id="btn-tk-refresh">🔄 Refresh</button>
+            <span class="muted" id="tk-counts"></span>
+          </div>
+          <div id="tk-list"><p class="muted" style="margin-top:10px;">Loading...</p></div>
+        </div>
+        <div id="tk-thread-wrap" class="hidden" style="margin-top:12px;">
+          <a href="#" id="tk-back" style="color:var(--accent-text); text-decoration:none; font-size:13px;">← All requests</a>
+          <div id="tk-head" style="margin:10px 0;"></div>
+          <div id="tk-msgs"></div>
+          <label>Reply</label>
+          <textarea id="tk-reply" maxlength="5000" placeholder="Write your reply to the institute"></textarea>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px;">
+            <select class="sel" id="tk-status">
+              <option value="">Status: keep automatic</option>
+              <option value="in_progress">Mark in progress</option>
+              <option value="resolved">Mark resolved</option>
+              <option value="closed">Close request</option>
+              <option value="open">Reopen</option>
+            </select>
+            <button class="btn btn-primary" id="btn-tk-reply">Send reply</button>
+            <button class="btn" id="btn-tk-status">Update status only</button>
+          </div>
+          <div class="err" id="tk-err"></div>
         </div>
       </details>
     </div>
@@ -399,6 +453,7 @@ async function loadList(){
     if (handleAuthError(r)) return;
     if (!r || !r.ok){ $('inst-list').innerHTML = '<p class="muted">Unable to load institutes.</p>'; return; }
     institutes = r.institutes || [];
+    loadTickets();
     savedPortalUrl = r.portal_url || '';
     if (document.activeElement !== $('in-portal-url')) $('in-portal-url').value = savedPortalUrl;
     renderList();
@@ -628,6 +683,83 @@ $('inst-list').addEventListener('click', async (e) => {
     }catch(_e){ errEl.textContent = 'Connection error.'; }
     finally{ btn.disabled = false; }
   }
+});
+
+/* ---------------- SUPPORT REQUESTS ---------------- */
+const TK_CAT = { suggestion: 'Suggestion', complaint: 'Complaint', technical: 'Technical issue', billing: 'Billing / subscription', other: 'Other' };
+const TK_ST = { open: 'Open', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed' };
+let tkCurrent = null;
+function tkDate(d){ return d ? new Date(d).toLocaleString('en-IN', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : ''; }
+async function loadTickets(){
+  const el = $('tk-list');
+  try{
+    const r = await rpc('sa_web_ticket_list', { ...creds(), p_status: $('tk-filter').value || null });
+    if (handleAuthError(r)) return;
+    if (!r || !r.ok){ el.innerHTML = '<p class="muted">Unable to load requests.</p>'; return; }
+    const c = r.counts || {};
+    $('tk-counts').textContent = `${c.unread || 0} new · ${c.open || 0} open · ${c.in_progress || 0} in progress · ${c.resolved || 0} resolved`;
+    const badge = $('sup-badge');
+    if (c.unread > 0){ badge.textContent = `${c.unread} new`; badge.classList.remove('hidden'); } else badge.classList.add('hidden');
+    el.innerHTML = r.tickets.length ? r.tickets.map(t => `
+      <div class="tk ${t.unread ? 'unread' : ''}" data-id="${t.id}">
+        <div class="tk-top"><b>${esc(t.institute_name)}</b> · ${esc(t.ticket_no)} · ${esc(TK_CAT[t.category] || t.category)}
+          ${t.unread ? '<span class="newdot">NEW</span>' : ''}<span class="st ${esc(t.status)}">${esc(TK_ST[t.status] || t.status)}</span></div>
+        <div class="tk-subj">${esc(t.subject)}</div>
+        <div class="muted" style="font-size:12px; margin-top:4px;">Last update: ${esc(tkDate(t.last_message_at))}</div>
+      </div>`).join('') : '<p class="muted" style="margin-top:10px;">No requests.</p>';
+  }catch(_e){ el.innerHTML = '<p class="muted">Connection error.</p>'; }
+}
+$('tk-filter').addEventListener('change', loadTickets);
+$('btn-tk-refresh').addEventListener('click', loadTickets);
+$('support-box').addEventListener('toggle', () => { if ($('support-box').open) loadTickets(); });
+$('tk-list').addEventListener('click', (e) => { const it = e.target.closest('.tk'); if (it) openTicket(Number(it.dataset.id)); });
+$('tk-back').addEventListener('click', (e) => {
+  e.preventDefault();
+  $('tk-thread-wrap').classList.add('hidden'); $('tk-list-wrap').classList.remove('hidden');
+  loadTickets();
+});
+async function openTicket(id){
+  tkCurrent = id;
+  $('tk-list-wrap').classList.add('hidden'); $('tk-thread-wrap').classList.remove('hidden');
+  $('tk-head').innerHTML = '<p class="muted">Loading...</p>'; $('tk-msgs').innerHTML = ''; $('tk-err').textContent = '';
+  $('tk-status').value = '';
+  try{
+    const r = await rpc('sa_web_ticket_thread', { ...creds(), p_ticket_id: id });
+    if (handleAuthError(r)) return;
+    if (!r || !r.ok){ $('tk-head').innerHTML = '<p class="muted">Unable to load this request.</p>'; return; }
+    const t = r.ticket;
+    $('tk-head').innerHTML = `
+      <div class="tk-top">${esc(t.ticket_no)} · ${esc(TK_CAT[t.category] || t.category)}<span class="st ${esc(t.status)}">${esc(TK_ST[t.status] || t.status)}</span></div>
+      <div style="font-family:Sora,sans-serif; font-weight:600; font-size:16px; margin-top:4px;">${esc(t.subject)}</div>
+      <div class="muted" style="font-size:12px; margin-top:4px;">${esc(t.institute_name)} (${esc(t.institute_code)}) · Admin: ${esc(t.admin_id || '-')}${t.contact_phone ? ' · ' + esc(t.contact_phone) : ''}${t.contact_email ? ' · ' + esc(t.contact_email) : ''} · Opened ${esc(tkDate(t.created_at))}</div>`;
+    $('tk-msgs').innerHTML = r.messages.map(m => `
+      <div class="msg ${m.sender === 'platform' ? 'me' : 'inst'}">
+        <div class="who">${m.sender === 'platform' ? 'You (platform team)' : esc(t.institute_name)}</div>${esc(m.body)}
+        <div class="when">${esc(tkDate(m.created_at))}</div>
+      </div>`).join('');
+  }catch(_e){ $('tk-head').innerHTML = '<p class="muted">Connection error.</p>'; }
+}
+$('btn-tk-reply').addEventListener('click', async () => {
+  const msg = $('tk-reply').value.trim(); $('tk-err').textContent = '';
+  if (!msg){ $('tk-err').textContent = 'Please write a reply.'; return; }
+  const btn = $('btn-tk-reply'); btn.disabled = true; btn.textContent = 'Sending...';
+  try{
+    const r = await rpc('sa_web_ticket_reply', { ...creds(), p_ticket_id: tkCurrent, p_message: msg, p_status: $('tk-status').value || null });
+    if (handleAuthError(r)) return;
+    if (r && r.ok){ $('tk-reply').value = ''; toast('Reply sent.', 'ok'); openTicket(tkCurrent); }
+    else $('tk-err').textContent = (r && r.error) || 'Unable to send reply.';
+  }catch(_e){ $('tk-err').textContent = 'Connection error.'; }
+  finally{ btn.disabled = false; btn.textContent = 'Send reply'; }
+});
+$('btn-tk-status').addEventListener('click', async () => {
+  const st = $('tk-status').value; $('tk-err').textContent = '';
+  if (!st){ $('tk-err').textContent = 'Choose a status first.'; return; }
+  try{
+    const r = await rpc('sa_web_ticket_set_status', { ...creds(), p_ticket_id: tkCurrent, p_status: st });
+    if (handleAuthError(r)) return;
+    if (r && r.ok){ toast('Status updated.', 'ok'); openTicket(tkCurrent); }
+    else $('tk-err').textContent = (r && r.error) || 'Unable to update status.';
+  }catch(_e){ $('tk-err').textContent = 'Connection error.'; }
 });
 
 /* ---------------- ACTIVITY REPORT ---------------- */
