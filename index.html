@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Super Admin — CBT Platform</title>
+<meta name="theme-color" content="#0a1424">
+<link rel="manifest" href="superadmin.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="sa-favicon-32.png">
+<link rel="apple-touch-icon" href="sa-apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Super Admin">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -62,6 +70,9 @@
   .link-row{ display:flex; gap:8px; margin-top:10px; }
   .link-row input{ font-size:12px; color:var(--text-dim); }
   .hidden{ display:none !important; }
+  .brand-logo{ width:34px; height:34px; border-radius:9px; display:block; }
+  .login-logo{ width:64px; height:64px; border-radius:16px; display:block; margin:0 auto 14px; }
+  .bar-actions{ display:flex; gap:8px; align-items:center; }
   .pw-wrap{ position:relative; }
   .pw-wrap input{ padding-right:70px; }
   .pw-toggle{
@@ -85,13 +96,17 @@
 <div class="wrap">
 
   <div class="bar">
-    <div class="brand"><span class="badge">SUPER</span><span>Platform Administration</span></div>
-    <button class="btn hidden" id="btn-logout">Logout</button>
+    <div class="brand"><img class="brand-logo" src="sa-icon-192.png" alt=""><span>Platform Administration</span></div>
+    <div class="bar-actions">
+      <button class="btn hidden" id="btn-install">📲 Install app</button>
+      <button class="btn hidden" id="btn-logout">Sign out</button>
+    </div>
   </div>
 
   <!-- ================= LOGIN ================= -->
   <div id="view-login" class="card" style="max-width:420px; margin:40px auto;">
-    <h2 style="font-size:18px;">Super admin sign in</h2>
+    <img class="login-logo" src="sa-icon-192.png" alt="">
+    <h2 style="font-size:18px; text-align:center;">Super admin sign in</h2>
     <p class="muted">Restricted to the platform owner. Access is locked for 15 minutes after 5 failed attempts.</p>
     <label>Username</label>
     <input id="in-user" autocomplete="username">
@@ -214,6 +229,41 @@ document.querySelectorAll('input[type="password"]').forEach(inp => {
   });
   wrap.appendChild(t);
 });
+
+/* ---------------- INSTALLABLE APP (PWA) ---------------- */
+if ('serviceWorker' in navigator){
+  const pageScope = window.location.pathname;            // works even if this file is renamed
+  navigator.serviceWorker.register('sa-sw.js', { scope: pageScope }).catch(() => {});
+}
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstall = e;
+  document.getElementById('btn-install').classList.remove('hidden');
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstall = null;
+  document.getElementById('btn-install').classList.add('hidden');
+  toast('Super Admin app installed.', 'ok');
+});
+document.getElementById('btn-install').addEventListener('click', async () => {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  try{ await deferredInstall.userChoice; }catch(e){}
+  deferredInstall = null;
+  document.getElementById('btn-install').classList.add('hidden');
+});
+(function iosHint(){
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const standalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  if (isIOS && !standalone){
+    const p = document.createElement('p');
+    p.className = 'muted';
+    p.style.cssText = 'text-align:center; margin-top:14px; font-size:12px;';
+    p.textContent = 'To install on iPhone/iPad: tap Share, then "Add to Home Screen".';
+    document.getElementById('view-login').appendChild(p);
+  }
+})();
 
 let sa = null;            // { u, p } — kept in memory only, never persisted
 let institutes = [];
