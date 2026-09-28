@@ -65,6 +65,15 @@
   .pill{ font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; }
   .pill.active{ background:#16a08533; color:var(--accent-text); }
   .pill.suspended{ background:#e74c3c33; color:#ff8a7d; }
+  .pill.expired{ background:#e74c3c33; color:#ff8a7d; }
+  .pill.warn{ background:#f39c1233; color:#f5b041; }
+  .sub-box{ margin-top:14px; border-top:1px solid var(--line-soft); padding-top:4px; }
+  .report-wrap{ overflow-x:auto; margin-top:12px; }
+  table.report{ width:100%; border-collapse:collapse; font-size:13px; min-width:680px; }
+  table.report th, table.report td{ padding:8px 10px; border-bottom:1px solid var(--line-soft); text-align:right; white-space:nowrap; }
+  table.report th:first-child, table.report td:first-child{ text-align:left; }
+  table.report th{ color:var(--text-dim); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+  select.sel{ background:var(--field); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:9px 10px; font:inherit; }
   .nums{ display:flex; flex-wrap:wrap; gap:14px; margin-top:10px; color:var(--text-dim); font-size:13px; }
   .nums b{ color:var(--text); }
   .link-row{ display:flex; gap:8px; margin-top:10px; }
@@ -197,6 +206,22 @@
           </label>
           <button class="btn btn-danger" id="btn-move" style="margin-top:6px;" disabled>🔀 Delete history and transfer</button>
         </div>
+      </details>
+    </div>
+
+    <div class="card">
+      <details id="report-box">
+        <summary>📊 Activity report</summary>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px;">
+          <select class="sel" id="rp-days">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+          <button class="btn" id="btn-report">Load report</button>
+          <button class="btn hidden" id="btn-report-csv">⬇ Download CSV</button>
+        </div>
+        <div class="report-wrap" id="report-out"><p class="muted" style="margin-top:10px;">Select a period and load the report.</p></div>
       </details>
     </div>
 
@@ -381,6 +406,18 @@ async function loadList(){
 }
 $('btn-refresh').addEventListener('click', loadList);
 
+function fmtDate(d){ return d ? new Date(d).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : '—'; }
+function statusPill(i){
+  if (i.status !== 'active') return '<span class="pill suspended">SUSPENDED</span>';
+  if (i.expired) return '<span class="pill expired">EXPIRED</span>';
+  if (i.days_left !== null && i.days_left !== undefined && i.days_left <= 7) return `<span class="pill warn">EXPIRES IN ${i.days_left}D</span>`;
+  return '<span class="pill active">ACTIVE</span>';
+}
+function accessText(i){
+  if (!i.plan_expires_at) return 'No expiry';
+  if (i.expired) return `Expired on ${fmtDate(i.plan_expires_at)}`;
+  return `Until ${fmtDate(i.plan_expires_at)} (${i.days_left} day${i.days_left === 1 ? '' : 's'} left)`;
+}
 function renderList(){
   $('st-inst').textContent = institutes.length;
   $('st-active').textContent = institutes.filter(i => i.status === 'active').length;
@@ -396,13 +433,17 @@ function renderList(){
           <div class="muted">Code: <b>${esc(i.code)}</b> · Admin: <b>${esc(i.admin_id || '-')}</b></div>
         </div>
         ${i.primary_color ? `<span class="swatch" style="background:${esc(i.primary_color)}" title="${esc(i.primary_color)}"></span>` : ''}
-        <span class="pill ${i.status === 'active' ? 'active' : 'suspended'}">${i.status === 'active' ? 'ACTIVE' : 'SUSPENDED'}</span>
+        ${statusPill(i)}
       </div>
       <div class="nums">
         <span>Students: <b>${i.students}</b>${i.max_students != null ? ` / ${i.max_students}` : ''}</span>
         <span>Pending: <b>${i.pending}</b></span>
         <span>Practice Q: <b>${i.practice_questions}</b></span>
         <span>Exam Q: <b>${i.exam_questions}</b></span>
+      </div>
+      <div class="nums" style="margin-top:6px;">
+        <span>Plan: <b>${esc(i.plan || 'free')}</b></span>
+        <span>Access: <b>${accessText(i)}</b></span>
       </div>
       <div class="link-row">
         <input readonly value="${esc(studentLink(i))}">
@@ -414,7 +455,7 @@ function renderList(){
         ${i.code === 'VIDYAPATH' ? '' : '<button class="btn" data-act="regen">🔄 Regenerate link</button>'}
         ${i.code === 'VIDYAPATH' ? '' : (i.status === 'active'
           ? '<button class="btn btn-danger" data-act="suspend">⏸ Suspend</button>'
-          : '<button class="btn" data-act="activate">▶ Activate</button>')}
+          : '<button class="btn" data-act="activate">▶ Activate</button><button class="btn btn-danger" data-act="delete">🗑 Delete institute</button>')}
       </div>
       <div class="edit-box hidden" style="margin-top:14px; border-top:1px solid var(--line-soft); padding-top:4px;">
         <div class="grid">
@@ -437,6 +478,21 @@ function renderList(){
         </div>
         <div class="err" data-f="err"></div>
         <button class="btn btn-primary" data-act="save">💾 Save</button>
+        ${i.code === 'VIDYAPATH' ? '' : `
+        <div class="sub-box">
+          <label>Subscription</label>
+          <div class="grid">
+            <div><label>Plan name</label><input data-f="plan" value="${esc(i.plan || '')}" placeholder="e.g. Basic, Pro"></div>
+            <div><label>Access valid until (blank = no expiry)</label><input data-f="expires" type="date" value="${i.plan_expires_at ? String(i.plan_expires_at).slice(0,10) : ''}"></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn" data-act="plus30">+30 days</button>
+            <button class="btn" data-act="plus365">+1 year</button>
+            <button class="btn" data-act="noexpiry">No expiry</button>
+            <button class="btn btn-primary" data-act="savesub">💾 Save subscription</button>
+          </div>
+          <div class="err" data-f="suberr"></div>
+        </div>`}
       </div>
     </div>`).join('');
 }
@@ -507,6 +563,50 @@ $('inst-list').addEventListener('click', async (e) => {
     return;
   }
 
+  if (act === 'plus30' || act === 'plus365' || act === 'noexpiry'){
+    const f = card.querySelector('[data-f="expires"]');
+    if (act === 'noexpiry'){ f.value = ''; return; }
+    const base = (inst.plan_expires_at && !inst.expired) ? new Date(inst.plan_expires_at) : new Date();
+    base.setDate(base.getDate() + (act === 'plus30' ? 30 : 365));
+    f.value = base.toISOString().slice(0, 10);
+    return;
+  }
+
+  if (act === 'savesub'){
+    const errEl = card.querySelector('[data-f="suberr"]'); errEl.textContent = '';
+    const d = card.querySelector('[data-f="expires"]').value;
+    const expiresAt = d ? new Date(d + 'T23:59:59+05:30').toISOString() : null;   // valid until end of that day (IST)
+    btn.disabled = true;
+    try{
+      const r = await rpc('sa_web_set_subscription', { ...creds(), p_code: inst.code,
+        p_plan: card.querySelector('[data-f="plan"]').value.trim(), p_expires_at: expiresAt });
+      if (handleAuthError(r)) return;
+      if (r && r.ok){ toast('Subscription updated.', 'ok'); loadList(); }
+      else errEl.textContent = (r && r.error) || 'Unable to update subscription.';
+    }catch(_e){ errEl.textContent = 'Connection error.'; }
+    finally{ btn.disabled = false; }
+    return;
+  }
+
+  if (act === 'delete'){
+    btn.disabled = true;
+    try{
+      const pv = await rpc('sa_web_delete_preview', { ...creds(), p_code: inst.code });
+      if (handleAuthError(pv)) return;
+      if (!pv || !pv.ok){ toast((pv && pv.error) || 'Unable to load institute details.', 'err'); return; }
+      const lines = Object.entries(pv.counts || {}).map(([k, v]) => `  • ${k.replace(/_/g, ' ')}: ${v}`).join('\n') || '  • (no records)';
+      const typed = prompt(
+        `PERMANENTLY DELETE "${pv.name}"?\n\nThe following records will be deleted and cannot be recovered:\n${lines}\n\nTo confirm, type the institute code: ${pv.code}`);
+      if (typed === null) return;
+      const r = await rpc('sa_web_delete_institute', { ...creds(), p_code: inst.code, p_confirm_code: typed.trim() });
+      if (handleAuthError(r)) return;
+      if (r && r.ok){ toast(`${r.name} deleted (${r.deleted_records} records).`, 'ok'); loadList(); }
+      else toast((r && r.error) || 'Unable to delete institute.', 'err');
+    }catch(_e){ toast('Connection error.', 'err'); }
+    finally{ btn.disabled = false; }
+    return;
+  }
+
   if (act === 'save'){
     const f = n => card.querySelector(`[data-f="${n}"]`);
     const errEl = f('err'); errEl.textContent = '';
@@ -530,7 +630,49 @@ $('inst-list').addEventListener('click', async (e) => {
   }
 });
 
-/* ---------------- MERA ACCOUNT ---------------- */
+/* ---------------- ACTIVITY REPORT ---------------- */
+let reportRows = [], reportDays = 30;
+$('btn-report').addEventListener('click', async () => {
+  const out = $('report-out'); const btn = $('btn-report');
+  btn.disabled = true; out.innerHTML = '<p class="muted" style="margin-top:10px;">Loading...</p>';
+  try{
+    const r = await rpc('sa_web_activity_report', { ...creds(), p_days: Number($('rp-days').value) });
+    if (handleAuthError(r)) return;
+    if (!r || !r.ok){ out.innerHTML = '<p class="muted">Unable to load the report.</p>'; return; }
+    reportRows = r.rows || []; reportDays = r.days;
+    out.innerHTML = `
+      <table class="report">
+        <thead><tr>
+          <th>Institute</th><th>Students</th><th>New</th><th>Active</th>
+          <th>Practice</th><th>Mock tests</th><th>Exams</th><th>Last activity</th>
+        </tr></thead>
+        <tbody>${reportRows.map(x => `<tr>
+          <td>${esc(x.name)} <span class="muted">(${esc(x.code)})</span></td>
+          <td>${x.students}</td><td>${x.new_students}</td><td><b>${x.active_students}</b></td>
+          <td>${x.practice_sessions}</td><td>${x.mock_tests}</td><td>${x.exams_submitted}</td>
+          <td>${fmtDate(x.last_activity)}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      <p class="muted" style="margin-top:8px;">"Active" = students who practised, took a mock test, submitted an exam or attempted a daily challenge in the last ${reportDays} days.</p>`;
+    $('btn-report-csv').classList.remove('hidden');
+  }catch(_e){ out.innerHTML = '<p class="muted">Connection error.</p>'; }
+  finally{ btn.disabled = false; }
+});
+$('btn-report-csv').addEventListener('click', () => {
+  const head = ['Institute','Code','Status','Students','New students','Active students','Practice sessions','Mock tests','Exams submitted','Last activity'];
+  const q = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+  const lines = [head.map(q).join(',')].concat(reportRows.map(x => [
+    x.name, x.code, x.status, x.students, x.new_students, x.active_students,
+    x.practice_sessions, x.mock_tests, x.exams_submitted, x.last_activity ? new Date(x.last_activity).toISOString() : ''
+  ].map(q).join(',')));
+  const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `activity-report-${reportDays}d-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+});
+
+/* ---------------- MY ACCOUNT ---------------- */
 $('account-box').addEventListener('toggle', () => {
   if ($('account-box').open && sa) $('a-user').value = sa.u;
 });
