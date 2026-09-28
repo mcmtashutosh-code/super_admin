@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>Super-Admin — CBT Institutes</title>
+<title>Super Admin — CBT Platform</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -85,20 +85,20 @@
 <div class="wrap">
 
   <div class="bar">
-    <div class="brand"><span class="badge">SUPER</span><span>Institutes Control</span></div>
+    <div class="brand"><span class="badge">SUPER</span><span>Platform Administration</span></div>
     <button class="btn hidden" id="btn-logout">Logout</button>
   </div>
 
   <!-- ================= LOGIN ================= -->
   <div id="view-login" class="card" style="max-width:420px; margin:40px auto;">
-    <h2 style="font-size:18px;">Super-admin login</h2>
-    <p class="muted">Sirf platform owner ke liye. 5 galat koshish par 15 minute ka lock.</p>
+    <h2 style="font-size:18px;">Super admin sign in</h2>
+    <p class="muted">Restricted to the platform owner. Access is locked for 15 minutes after 5 failed attempts.</p>
     <label>Username</label>
     <input id="in-user" autocomplete="username">
     <label>Password</label>
     <input id="in-pass" type="password" autocomplete="current-password">
     <div class="err" id="login-err"></div>
-    <button class="btn btn-primary" id="btn-login" style="width:100%; margin-top:6px;">Login</button>
+    <button class="btn btn-primary" id="btn-login" style="width:100%; margin-top:6px;">Sign in</button>
   </div>
 
   <!-- ================= MAIN ================= -->
@@ -111,82 +111,82 @@
     </div>
 
     <div class="card">
-      <label style="margin-top:0;">Student portal ka link (ek baar daaliye — database mein save hota hai)</label>
+      <label style="margin-top:0;">Student portal URL</label>
       <div style="display:flex; gap:8px;">
-        <input id="in-portal-url" placeholder="jaise https://mcmtashutosh-code.github.io/portal-repo/">
+        <input id="in-portal-url" placeholder="e.g. https://yourname.github.io/portal/">
         <button class="btn" id="btn-save-portal" style="flex:none;">💾 Save</button>
       </div>
-      <p class="muted" style="margin:6px 0 0;">Isse har institute ka gupt link banta hai: <code>portal-link?inst=CODE-XXXXXX</code>. Institute admins ko bhi ye link unke dashboard mein dikhta hai.</p>
+      <p class="muted" style="margin:6px 0 0;">Used to generate each institute's private registration link (<code>portal-url?inst=CODE-XXXXXX</code>). Institute administrators also see their link on their dashboard.</p>
     </div>
 
     <div class="card">
       <details id="account-box">
-        <summary>👤 Mera account (username / password badliye)</summary>
+        <summary>👤 My account</summary>
         <div class="grid">
-          <div><label>Abhi ka password *</label><input id="a-old" type="password" autocomplete="current-password"></div>
-          <div><label>Naya username *</label><input id="a-user" autocomplete="username"></div>
-          <div><label>Naya password * (8+ akshar, letters + numbers)</label><input id="a-new" type="password" autocomplete="new-password"></div>
-          <div><label>Naya password dobara *</label><input id="a-new2" type="password" autocomplete="new-password"></div>
+          <div><label>Current password *</label><input id="a-old" type="password" autocomplete="current-password"></div>
+          <div><label>New username *</label><input id="a-user" autocomplete="username"></div>
+          <div><label>New password * (min. 8 characters, letters and numbers)</label><input id="a-new" type="password" autocomplete="new-password"></div>
+          <div><label>Confirm new password *</label><input id="a-new2" type="password" autocomplete="new-password"></div>
         </div>
         <div class="err" id="account-err"></div>
-        <button class="btn btn-primary" id="btn-account" style="margin-top:6px;">Save</button>
+        <button class="btn btn-primary" id="btn-account" style="margin-top:6px;">Update account</button>
       </details>
     </div>
 
     <div class="card">
       <details id="create-box">
-        <summary>➕ Naya institute banaiye</summary>
+        <summary>➕ Add institute</summary>
         <div class="grid">
           <div><label>Institute code *</label><input id="c-code" placeholder="SHARMA (A-Z, 0-9)" maxlength="20"></div>
-          <div><label>Institute ka poora naam *</label><input id="c-name" placeholder="Sharma Coaching Centre"></div>
-          <div><label>Chhota naam (portal header)</label><input id="c-short" placeholder="Sharma Coaching"></div>
-          <div><label>Max students (khali = unlimited)</label><input id="c-max" type="number" min="0"></div>
+          <div><label>Institute name *</label><input id="c-name" placeholder="Sharma Coaching Centre"></div>
+          <div><label>Short name (portal header)</label><input id="c-short" placeholder="Sharma Coaching"></div>
+          <div><label>Student limit (blank = unlimited)</label><input id="c-max" type="number" min="0"></div>
           <div><label>Admin ID *</label><input id="c-admin" placeholder="sharma_admin"></div>
-          <div><label>Admin password * (min 6)</label><input id="c-pass" type="text"></div>
+          <div><label>Admin password * (min. 6 characters)</label><input id="c-pass" type="text"></div>
           <div><label>Contact phone</label><input id="c-phone"></div>
           <div><label>Contact email</label><input id="c-email" type="email"></div>
-          <div><label>Logo link (https://...)</label><input id="c-logo" placeholder="https://..."></div>
+          <div><label>Logo URL (https://...)</label><input id="c-logo" placeholder="https://..."></div>
           <div>
-            <label>Portal ka rang</label>
+            <label>Brand colour</label>
             <div style="display:flex; gap:10px; align-items:center;">
               <input id="c-color" type="color" value="#16a085">
               <label style="margin:0; text-transform:none; font-weight:500; display:flex; gap:6px; align-items:center;">
-                <input id="c-color-on" type="checkbox" style="width:auto;"> rang set karo
+                <input id="c-color-on" type="checkbox" style="width:auto;"> Apply custom colour
               </label>
             </div>
             <div class="warn" id="c-color-warn"></div>
           </div>
         </div>
         <div class="err" id="create-err"></div>
-        <button class="btn btn-primary" id="btn-create" style="margin-top:6px;">Institute banaiye</button>
+        <button class="btn btn-primary" id="btn-create" style="margin-top:6px;">Create institute</button>
       </details>
     </div>
 
     <div class="card">
       <details id="move-box">
-        <summary>🔀 Student ko doosre institute mein bhejo</summary>
-        <p class="muted" style="margin:10px 0 0;">Jab koi student galat link se register ho gaya ho. Pehle mobile se dhundhiye, jaankari dekhiye, phir move kariye.</p>
+        <summary>🔀 Transfer a student</summary>
+        <p class="muted" style="margin:10px 0 0;">Use this when a student has registered under the wrong institute. Search by mobile number, review the details, then transfer.</p>
         <div style="display:flex; gap:8px; margin-top:10px;">
-          <input id="m-mobile" type="tel" inputmode="numeric" maxlength="10" placeholder="Student ka mobile number">
-          <button class="btn" id="btn-find" style="flex:none;">🔍 Dhundho</button>
+          <input id="m-mobile" type="tel" inputmode="numeric" maxlength="10" placeholder="Student mobile number">
+          <button class="btn" id="btn-find" style="flex:none;">🔍 Search</button>
         </div>
         <div class="err" id="move-err"></div>
         <div id="move-result" class="hidden" style="margin-top:6px; border-top:1px solid var(--line-soft); padding-top:10px;">
           <div id="m-info"></div>
-          <label>Kis institute mein bhejna hai?</label>
+          <label>Transfer to</label>
           <select id="m-target" style="width:100%; background:var(--field); border:1px solid var(--line); color:var(--text); border-radius:9px; padding:10px 12px; font:inherit;"></select>
-          <p class="warn" style="margin-top:10px;">Naye institute mein <b>sirf account</b> jayega (naam, mobile, password, email).<br>Upar dikhi <b>poori history DELETE</b> ho jayegi — exam results, practice, mock tests, feedback, messages, challenge points. Ye wapas nahi aayegi.</p>
+          <p class="warn" style="margin-top:10px;">Only the <b>account</b> (name, mobile, password, email) will be transferred.<br>All of the student's <b>history will be permanently deleted</b>: exam results, practice sessions, mock tests, feedback, messages and challenge points.</p>
           <label style="text-transform:none; font-weight:500; display:flex; gap:8px; align-items:flex-start; color:var(--text);">
             <input id="m-agree" type="checkbox" style="width:auto; margin-top:3px;">
-            Main samajhta hoon ki is student ki purani saari history hamesha ke liye delete ho jayegi.
+            I understand that this student's history will be permanently deleted.
           </label>
-          <button class="btn btn-danger" id="btn-move" style="margin-top:6px;" disabled>🔀 History delete karke move kariye</button>
+          <button class="btn btn-danger" id="btn-move" style="margin-top:6px;" disabled>🔀 Delete history and transfer</button>
         </div>
       </details>
     </div>
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin:22px 0 10px;">
-      <h3 style="font-size:16px;">Saare institutes</h3>
+      <h3 style="font-size:16px;">Institutes</h3>
       <button class="btn" id="btn-refresh">🔄 Refresh</button>
     </div>
     <div id="inst-list"><p class="muted">Loading...</p></div>
@@ -199,7 +199,7 @@
 const SUPABASE_URL = "https://iyzujwixwfydmkzmhrxo.supabase.co";
 const SUPABASE_KEY = "sb_publishable_4t1qso9eT9lNU_aGnS8hiQ_zX3EGBXd";
 
-/* Har password box mein SHOW/HIDE button */
+/* Add a SHOW/HIDE toggle to every password field */
 document.querySelectorAll('input[type="password"]').forEach(inp => {
   const wrap = document.createElement('div');
   wrap.className = 'pw-wrap';
@@ -215,7 +215,7 @@ document.querySelectorAll('input[type="password"]').forEach(inp => {
   wrap.appendChild(t);
 });
 
-let sa = null;            // { u, p } — sirf memory mein, kahin save nahi
+let sa = null;            // { u, p } — kept in memory only, never persisted
 let institutes = [];
 
 function $(id){ return document.getElementById(id); }
@@ -239,8 +239,8 @@ function handleAuthError(r){
   if (r && (r.error === 'invalid' || r.error === 'locked')){
     logout();
     $('login-err').textContent = r.error === 'locked'
-      ? 'Account 15 minute ke liye lock hai. Baad mein koshish kariye.'
-      : 'Session khatam. Dobara login kariye.';
+      ? 'This account is locked for 15 minutes. Please try again later.'
+      : 'Your session has ended. Please sign in again.';
     return true;
   }
   return false;
@@ -253,8 +253,8 @@ function luminance(hex){
 function colorWarning(hex){
   if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return '';
   const L = luminance(hex);
-  if (L < .12) return '⚠ Ye rang bahut gehra hai — portal ke buttons ka text padhna mushkil ho sakta hai. Thoda halka rang chuniye.';
-  if (L > .75) return '⚠ Ye rang bahut halka hai — light mode mein kam dikhega.';
+  if (L < .12) return '⚠ This colour is very dark; button text may be hard to read. Consider a lighter shade.';
+  if (L > .75) return '⚠ This colour is very light and may be hard to see in light mode.';
   return '';
 }
 
@@ -262,7 +262,7 @@ function colorWarning(hex){
 async function doLogin(){
   const u = $('in-user').value.trim(), p = $('in-pass').value;
   $('login-err').textContent = '';
-  if (!u || !p){ $('login-err').textContent = 'Username aur password daaliye.'; return; }
+  if (!u || !p){ $('login-err').textContent = 'Please enter your username and password.'; return; }
   const btn = $('btn-login'); btn.disabled = true; btn.textContent = 'Checking...';
   try{
     const r = await rpc('sa_web_login', { p_username: u, p_password: p });
@@ -274,9 +274,9 @@ async function doLogin(){
       $('btn-logout').classList.remove('hidden');
       loadList();
     } else if (r && r.error === 'locked'){
-      $('login-err').textContent = 'Bahut galat koshish. 15 minute baad dobara try kariye.';
+      $('login-err').textContent = 'Too many failed attempts. Please try again in 15 minutes.';
     } else {
-      $('login-err').textContent = 'Galat username ya password.';
+      $('login-err').textContent = 'Invalid username or password.';
     }
   }catch(e){ $('login-err').textContent = 'Connection error.'; }
   finally{ btn.disabled = false; btn.textContent = 'Login'; }
@@ -297,7 +297,7 @@ $('btn-logout').addEventListener('click', logout);
 /* ---------------- PORTAL URL ---------------- */
 function studentLink(inst){
   const b = savedPortalUrl;
-  if (!b) return '(upar student portal ka link daal kar Save kariye)';
+  if (!b) return '(Set the student portal URL above to generate links)';
   if (inst.code === 'VIDYAPATH' || !inst.join_key) return b;
   return `${b}?inst=${encodeURIComponent(inst.join_key)}`;
 }
@@ -310,9 +310,9 @@ $('btn-save-portal').addEventListener('click', async () => {
     if (r && r.ok){
       savedPortalUrl = r.portal_url || '';
       $('in-portal-url').value = savedPortalUrl;
-      toast('Portal link save ho gaya.', 'ok');
+      toast('Portal URL saved.', 'ok');
       renderList();
-    } else toast((r && r.error) || 'Save nahi ho paaya.', 'err');
+    } else toast((r && r.error) || 'Unable to save.', 'err');
   }catch(_e){ toast('Connection error.', 'err'); }
   finally{ btn.disabled = false; }
 });
@@ -323,7 +323,7 @@ async function loadList(){
   try{
     const r = await rpc('sa_web_list', creds());
     if (handleAuthError(r)) return;
-    if (!r || !r.ok){ $('inst-list').innerHTML = '<p class="muted">List nahi mil payi.</p>'; return; }
+    if (!r || !r.ok){ $('inst-list').innerHTML = '<p class="muted">Unable to load institutes.</p>'; return; }
     institutes = r.institutes || [];
     savedPortalUrl = r.portal_url || '';
     if (document.activeElement !== $('in-portal-url')) $('in-portal-url').value = savedPortalUrl;
@@ -337,7 +337,7 @@ function renderList(){
   $('st-active').textContent = institutes.filter(i => i.status === 'active').length;
   $('st-students').textContent = institutes.reduce((a, i) => a + Number(i.students || 0), 0);
 
-  if (!institutes.length){ $('inst-list').innerHTML = '<p class="muted">Koi institute nahi.</p>'; return; }
+  if (!institutes.length){ $('inst-list').innerHTML = '<p class="muted">No institutes found.</p>'; return; }
   $('inst-list').innerHTML = institutes.map((i, idx) => `
     <div class="card" data-idx="${idx}">
       <div class="inst-head">
@@ -360,27 +360,27 @@ function renderList(){
         <button class="btn" data-act="copy">📋 Copy</button>
       </div>
       <div class="btn-row">
-        <button class="btn" data-act="edit">✏️ Edit / Branding</button>
-        <button class="btn" data-act="reset">🔑 Admin password reset</button>
-        ${i.code === 'VIDYAPATH' ? '' : '<button class="btn" data-act="regen">🔄 Naya link banao</button>'}
+        <button class="btn" data-act="edit">✏️ Edit details</button>
+        <button class="btn" data-act="reset">🔑 Reset admin password</button>
+        ${i.code === 'VIDYAPATH' ? '' : '<button class="btn" data-act="regen">🔄 Regenerate link</button>'}
         ${i.code === 'VIDYAPATH' ? '' : (i.status === 'active'
           ? '<button class="btn btn-danger" data-act="suspend">⏸ Suspend</button>'
           : '<button class="btn" data-act="activate">▶ Activate</button>')}
       </div>
       <div class="edit-box hidden" style="margin-top:14px; border-top:1px solid var(--line-soft); padding-top:4px;">
         <div class="grid">
-          <div><label>Poora naam *</label><input data-f="name" value="${esc(i.name)}"></div>
-          <div><label>Chhota naam</label><input data-f="short_name" value="${esc(i.short_name || '')}"></div>
-          <div><label>Max students (khali = unlimited)</label><input data-f="max_students" type="number" min="0" value="${i.max_students ?? ''}"></div>
+          <div><label>Institute name *</label><input data-f="name" value="${esc(i.name)}"></div>
+          <div><label>Short name</label><input data-f="short_name" value="${esc(i.short_name || '')}"></div>
+          <div><label>Student limit (blank = unlimited)</label><input data-f="max_students" type="number" min="0" value="${i.max_students ?? ''}"></div>
           <div><label>Contact phone</label><input data-f="contact_phone" value="${esc(i.contact_phone || '')}"></div>
           <div><label>Contact email</label><input data-f="contact_email" value="${esc(i.contact_email || '')}"></div>
-          <div><label>Logo link (https://...)</label><input data-f="logo_url" value="${esc(i.logo_url || '')}"></div>
+          <div><label>Logo URL (https://...)</label><input data-f="logo_url" value="${esc(i.logo_url || '')}"></div>
           <div>
-            <label>Portal ka rang</label>
+            <label>Brand colour</label>
             <div style="display:flex; gap:10px; align-items:center;">
               <input data-f="color" type="color" value="${esc(i.primary_color || '#16a085')}">
               <label style="margin:0; text-transform:none; font-weight:500; display:flex; gap:6px; align-items:center;">
-                <input data-f="color_on" type="checkbox" style="width:auto;" ${i.primary_color ? 'checked' : ''}> rang set karo
+                <input data-f="color_on" type="checkbox" style="width:auto;" ${i.primary_color ? 'checked' : ''}> Apply custom colour
               </label>
             </div>
             <div class="warn" data-f="color_warn"></div>
@@ -407,20 +407,20 @@ $('inst-list').addEventListener('click', async (e) => {
 
   if (act === 'copy'){
     const val = card.querySelector('.link-row input').value;
-    try{ await navigator.clipboard.writeText(val); toast('Link copy ho gaya.', 'ok'); }
-    catch(_e){ card.querySelector('.link-row input').select(); toast('Link select ho gaya — Ctrl+C dabaiye.'); }
+    try{ await navigator.clipboard.writeText(val); toast('Link copied to clipboard.', 'ok'); }
+    catch(_e){ card.querySelector('.link-row input').select(); toast('Link selected. Press Ctrl+C to copy.'); }
     return;
   }
   if (act === 'edit'){ card.querySelector('.edit-box').classList.toggle('hidden'); return; }
 
   if (act === 'regen'){
-    if (!confirm(`"${inst.name}" ka NAYA link banayein?\n\nPurana link turant band ho jayega. Jo students pehle se registered hain wo naye link se login karenge — isliye naya link institute ko zaroor bhejiye.`)) return;
+    if (!confirm(`Generate a new registration link for "${inst.name}"?\n\nThe current link will stop working immediately. Existing students will need the new link to sign in, so please share it with the institute.`)) return;
     btn.disabled = true;
     try{
       const r = await rpc('sa_web_regenerate_join_key', { ...creds(), p_code: inst.code });
       if (handleAuthError(r)) return;
-      if (r && r.ok){ toast(`Naya link ban gaya: ...?inst=${r.join_key}`, 'ok'); loadList(); }
-      else toast((r && r.error) || 'Nahi ho paaya.', 'err');
+      if (r && r.ok){ toast(`New link generated: ...?inst=${r.join_key}`, 'ok'); loadList(); }
+      else toast((r && r.error) || 'Action failed. Please try again.', 'err');
     }catch(_e){ toast('Connection error.', 'err'); }
     finally{ btn.disabled = false; }
     return;
@@ -429,15 +429,15 @@ $('inst-list').addEventListener('click', async (e) => {
   if (act === 'suspend' || act === 'activate'){
     const status = act === 'suspend' ? 'suspended' : 'active';
     const msg = act === 'suspend'
-      ? `"${inst.name}" ko SUSPEND karein?\n\nUske students aur admin login nahi kar payenge. Data surakshit rahega.`
-      : `"${inst.name}" ko phir se ACTIVE karein?`;
+      ? `Suspend "${inst.name}"?\n\nIts students and administrator will not be able to sign in. All data will be retained.`
+      : `Reactivate "${inst.name}"?`;
     if (!confirm(msg)) return;
     btn.disabled = true;
     try{
       const r = await rpc('sa_web_set_status', { ...creds(), p_code: inst.code, p_status: status });
       if (handleAuthError(r)) return;
-      if (r && r.ok){ toast(act === 'suspend' ? 'Suspend ho gaya.' : 'Active ho gaya.', 'ok'); loadList(); }
-      else toast((r && r.error) || 'Nahi ho paaya.', 'err');
+      if (r && r.ok){ toast(act === 'suspend' ? 'Institute suspended.' : 'Institute reactivated.', 'ok'); loadList(); }
+      else toast((r && r.error) || 'Action failed. Please try again.', 'err');
     }catch(_e){ toast('Connection error.', 'err'); }
     finally{ btn.disabled = false; }
     return;
@@ -445,15 +445,15 @@ $('inst-list').addEventListener('click', async (e) => {
 
   if (act === 'reset'){
     const adminId = (inst.admin_id || '').split(',')[0].trim();
-    if (!adminId){ toast('Is institute ka admin nahi mila.', 'err'); return; }
-    const np = prompt(`"${adminId}" ka naya password (kam se kam 6 akshar):`);
+    if (!adminId){ toast('No administrator found for this institute.', 'err'); return; }
+    const np = prompt(`Enter a new password for "${adminId}" (min. 6 characters):`);
     if (np == null) return;
-    if (np.trim().length < 6){ toast('Password kam se kam 6 akshar.', 'err'); return; }
+    if (np.trim().length < 6){ toast('Password must be at least 6 characters.', 'err'); return; }
     try{
       const r = await rpc('sa_web_reset_admin_password', { ...creds(), p_admin_id: adminId, p_new_password: np.trim() });
       if (handleAuthError(r)) return;
-      if (r && r.ok) toast(`${adminId} ka password badal gaya. Admin ko naya password bata dijiye.`, 'ok');
-      else toast((r && r.error) || 'Nahi ho paaya.', 'err');
+      if (r && r.ok) toast(`Password updated for ${adminId}. Please share it with the administrator securely.`, 'ok');
+      else toast((r && r.error) || 'Action failed. Please try again.', 'err');
     }catch(_e){ toast('Connection error.', 'err'); }
     return;
   }
@@ -463,7 +463,7 @@ $('inst-list').addEventListener('click', async (e) => {
     const errEl = f('err'); errEl.textContent = '';
     const maxRaw = f('max_students').value.trim();
     const logo = f('logo_url').value.trim();
-    if (logo && !/^https:\/\//i.test(logo)){ errEl.textContent = 'Logo ka link https:// se shuru hona chahiye.'; return; }
+    if (logo && !/^https:\/\//i.test(logo)){ errEl.textContent = 'Logo URL must start with https://'; return; }
     btn.disabled = true;
     try{
       const r = await rpc('sa_web_update_institute', {
@@ -474,8 +474,8 @@ $('inst-list').addEventListener('click', async (e) => {
         p_logo_url: logo, p_primary_color: f('color_on').checked ? f('color').value : ''
       });
       if (handleAuthError(r)) return;
-      if (r && r.ok){ toast('Save ho gaya.', 'ok'); loadList(); }
-      else errEl.textContent = (r && r.error) || 'Save nahi ho paaya.';
+      if (r && r.ok){ toast('Changes saved.', 'ok'); loadList(); }
+      else errEl.textContent = (r && r.error) || 'Unable to save changes.';
     }catch(_e){ errEl.textContent = 'Connection error.'; }
     finally{ btn.disabled = false; }
   }
@@ -488,11 +488,11 @@ $('account-box').addEventListener('toggle', () => {
 $('btn-account').addEventListener('click', async () => {
   const errEl = $('account-err'); errEl.textContent = '';
   const oldP = $('a-old').value, newU = $('a-user').value.trim(), newP = $('a-new').value, newP2 = $('a-new2').value;
-  if (!oldP){ errEl.textContent = 'Abhi ka password daaliye.'; return; }
-  if (newU.length < 4){ errEl.textContent = 'Username kam se kam 4 akshar.'; return; }
-  if (newP.length < 8 || !/[a-zA-Z]/.test(newP) || !/[0-9]/.test(newP)){ errEl.textContent = 'Naya password kam se kam 8 akshar ka ho, letters + numbers dono.'; return; }
-  if (newP !== newP2){ errEl.textContent = 'Dono naye password match nahi kar rahe.'; return; }
-  const btn = $('btn-account'); btn.disabled = true; btn.textContent = 'Save ho raha hai...';
+  if (!oldP){ errEl.textContent = 'Please enter your current password.'; return; }
+  if (newU.length < 4){ errEl.textContent = 'Username must be at least 4 characters.'; return; }
+  if (newP.length < 8 || !/[a-zA-Z]/.test(newP) || !/[0-9]/.test(newP)){ errEl.textContent = 'New password must be at least 8 characters and contain both letters and numbers.'; return; }
+  if (newP !== newP2){ errEl.textContent = 'New passwords do not match.'; return; }
+  const btn = $('btn-account'); btn.disabled = true; btn.textContent = 'Saving...';
   try{
     const r = await rpc('sa_web_change_credentials', { p_username: sa.u, p_password: oldP, p_new_username: newU, p_new_password: newP });
     if (r && r.ok){
@@ -501,16 +501,16 @@ $('btn-account').addEventListener('click', async () => {
       document.querySelectorAll('.pw-wrap input').forEach(i => i.type = 'password');
       document.querySelectorAll('.pw-toggle').forEach(b => b.textContent = 'SHOW');
       $('account-box').open = false;
-      toast('Username/password badal gaya. Agli baar naye se login kariye.', 'ok');
+      toast('Account updated. Use your new credentials next time you sign in.', 'ok');
     } else if (r && r.error === 'invalid'){
-      errEl.textContent = 'Abhi ka password galat hai.';
+      errEl.textContent = 'Current password is incorrect.';
     } else if (r && r.error === 'locked'){
       handleAuthError(r);
     } else {
-      errEl.textContent = (r && r.error) || 'Save nahi ho paaya.';
+      errEl.textContent = (r && r.error) || 'Unable to update account.';
     }
   }catch(_e){ errEl.textContent = 'Connection error.'; }
-  finally{ btn.disabled = false; btn.textContent = 'Save'; }
+  finally{ btn.disabled = false; btn.textContent = 'Update account'; }
 });
 
 /* ---------------- STUDENT MOVE ---------------- */
@@ -521,17 +521,17 @@ $('btn-find').addEventListener('click', async () => {
   const errEl = $('move-err'); errEl.textContent = '';
   $('move-result').classList.add('hidden'); moveStudent = null;
   const m = $('m-mobile').value.trim();
-  if (!/^\d{10}$/.test(m)){ errEl.textContent = 'Sahi 10 ank ka mobile number daaliye.'; return; }
+  if (!/^\d{10}$/.test(m)){ errEl.textContent = 'Please enter a valid 10-digit mobile number.'; return; }
   const btn = $('btn-find'); btn.disabled = true;
   try{
     const r = await rpc('sa_web_find_student', { ...creds(), p_mobile: m });
     if (handleAuthError(r)) return;
-    if (!r || !r.ok){ errEl.textContent = (r && r.error) || 'Student nahi mila.'; return; }
+    if (!r || !r.ok){ errEl.textContent = (r && r.error) || 'Student not found.'; return; }
     moveStudent = r.student;
     const c = r.counts;
     $('m-info').innerHTML = `
       <div style="font-family:Sora,sans-serif; font-weight:600; font-size:15px;">${esc(r.student.name)} <span class="muted">(${esc(r.student.mobile)})</span></div>
-      <div class="muted">Abhi: <b>${esc(r.student.institute_name)}</b> (${esc(r.student.institute_code)}) · ${r.student.approved ? 'Approved' : 'Approval pending'}${r.student.email ? ' · ' + esc(r.student.email) : ''}</div>
+      <div class="muted">Current institute: <b>${esc(r.student.institute_name)}</b> (${esc(r.student.institute_code)}) · ${r.student.approved ? 'Approved' : 'Approval pending'}${r.student.email ? ' · ' + esc(r.student.email) : ''}</div>
       <div class="nums">
         <span>Exam results: <b>${c.exam_results}</b></span>
         <span>Practice: <b>${c.practice_sessions}</b></span>
@@ -540,11 +540,11 @@ $('btn-find').addEventListener('click', async () => {
         <span>Feedback: <b>${c.feedback}</b></span>
         <span>Messages: <b>${c.messages}</b></span>
       </div>
-      ${c.in_exam_now ? '<p class="err">⚠ Ye student abhi exam de raha hai — exam khatam hone ke baad move kariye.</p>' : ''}`;
+      ${c.in_exam_now ? '<p class="err">⚠ This student is currently taking an exam. Please transfer after the exam ends.</p>' : ''}`;
     const targets = institutes.filter(i => i.status === 'active' && i.code !== r.student.institute_code);
     $('m-target').innerHTML = targets.length
       ? targets.map(i => `<option value="${esc(i.code)}">${esc(i.name)} (${esc(i.code)})</option>`).join('')
-      : '<option value="">Koi doosra active institute nahi</option>';
+      : '<option value="">No other active institutes</option>';
     moveBlocked = !targets.length || c.in_exam_now;
     $('m-agree').checked = false;
     $('btn-move').disabled = true;
@@ -558,21 +558,21 @@ $('btn-move').addEventListener('click', async () => {
   const target = institutes.find(i => i.code === code);
   if (!code || !target) return;
   if (!$('m-agree').checked) return;
-  if (!confirm(`PAKKA?\n\n${moveStudent.name} (${moveStudent.mobile}) ko "${moveStudent.institute_name}" se "${target.name}" mein bhejna hai.\n\nIski saari purani history (exam results, practice, mock tests, feedback, messages, challenge points) HAMESHA KE LIYE DELETE ho jayegi.`)) return;
+  if (!confirm(`Confirm transfer\n\nTransfer ${moveStudent.name} (${moveStudent.mobile}) from "${moveStudent.institute_name}" to "${target.name}"?\n\nAll of this student's history (exam results, practice sessions, mock tests, feedback, messages and challenge points) will be permanently deleted.`)) return;
   const errEl = $('move-err'); errEl.textContent = '';
-  const btn = $('btn-move'); btn.disabled = true; btn.textContent = 'Move ho raha hai...';
+  const btn = $('btn-move'); btn.disabled = true; btn.textContent = 'Transferring...';
   try{
     const r = await rpc('sa_web_move_student', { ...creds(), p_mobile: moveStudent.mobile, p_target_code: code });
     if (handleAuthError(r)) return;
     if (r && r.ok){
-      toast(`${moveStudent.name} ab ${r.to} mein hai. Purani history (${r.deleted_total} records) delete ho gayi.`, 'ok');
+      toast(`${moveStudent.name} has been transferred to ${r.to}. ${r.deleted_total} historical record(s) were deleted.`, 'ok');
       $('move-result').classList.add('hidden'); $('m-mobile').value = ''; moveStudent = null; moveBlocked = true; $('m-agree').checked = false;
       loadList();
     } else {
-      errEl.textContent = (r && r.error) || 'Move nahi ho paaya.';
+      errEl.textContent = (r && r.error) || 'Unable to transfer the student.';
     }
   }catch(_e){ errEl.textContent = 'Connection error.'; }
-  finally{ btn.textContent = '🔀 History delete karke move kariye'; btn.disabled = moveBlocked || !$('m-agree').checked; }
+  finally{ btn.textContent = '🔀 Delete history and transfer'; btn.disabled = moveBlocked || !$('m-agree').checked; }
 });
 
 /* ---------------- CREATE ---------------- */
@@ -588,12 +588,12 @@ $('btn-create').addEventListener('click', async () => {
   const pass = $('c-pass').value.trim();
   const logo = $('c-logo').value.trim();
   const maxRaw = $('c-max').value.trim();
-  if (!/^[A-Z0-9]{2,20}$/.test(code)){ errEl.textContent = 'Code sirf A-Z aur 0-9, 2 se 20 akshar.'; return; }
-  if (!name){ errEl.textContent = 'Institute ka naam zaroori hai.'; return; }
-  if (!adminId || pass.length < 6){ errEl.textContent = 'Admin ID aur kam se kam 6 akshar ka password zaroori hai.'; return; }
-  if (logo && !/^https:\/\//i.test(logo)){ errEl.textContent = 'Logo ka link https:// se shuru hona chahiye.'; return; }
+  if (!/^[A-Z0-9]{2,20}$/.test(code)){ errEl.textContent = 'Code must be 2–20 characters using A–Z and 0–9 only.'; return; }
+  if (!name){ errEl.textContent = 'Institute name is required.'; return; }
+  if (!adminId || pass.length < 6){ errEl.textContent = 'Admin ID and a password of at least 6 characters are required.'; return; }
+  if (logo && !/^https:\/\//i.test(logo)){ errEl.textContent = 'Logo URL must start with https://'; return; }
 
-  const btn = $('btn-create'); btn.disabled = true; btn.textContent = 'Ban raha hai...';
+  const btn = $('btn-create'); btn.disabled = true; btn.textContent = 'Creating...';
   try{
     const r = await rpc('sa_web_create_institute', {
       ...creds(), p_code: code, p_name: name, p_admin_id: adminId, p_admin_pass: pass,
@@ -604,16 +604,16 @@ $('btn-create').addEventListener('click', async () => {
     });
     if (handleAuthError(r)) return;
     if (r && r.ok){
-      toast(`${name} ban gaya! Admin: ${adminId}`, 'ok');
+      toast(`${name} created. Administrator: ${adminId}`, 'ok');
       ['c-code','c-name','c-short','c-max','c-admin','c-pass','c-phone','c-email','c-logo'].forEach(id => $(id).value = '');
       $('c-color-on').checked = false; $('c-color-warn').textContent = '';
       $('create-box').open = false;
       loadList();
     } else {
-      errEl.textContent = (r && r.error) || 'Institute nahi ban paaya.';
+      errEl.textContent = (r && r.error) || 'Unable to create institute.';
     }
   }catch(_e){ errEl.textContent = 'Connection error.'; }
-  finally{ btn.disabled = false; btn.textContent = 'Institute banaiye'; }
+  finally{ btn.disabled = false; btn.textContent = 'Create institute'; }
 });
 </script>
 </body>
