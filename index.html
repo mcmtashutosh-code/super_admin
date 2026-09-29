@@ -461,6 +461,30 @@ async function loadList(){
 }
 $('btn-refresh').addEventListener('click', loadList);
 
+/* ---------------- PLAN PRESETS (Vidyapath CBT 1.0) ---------------- */
+const PLAN_PRESETS = {
+  trial:    { label: 'Free trial — 7 days',   plan: 'Trial',    students: 50,  tests: 1, days: 7, prices: null },
+  aarambh:  { label: 'Aarambh — up to 50',    plan: 'Aarambh',  students: 50,  tests: 4, prices: { 1: 500,  3: 1399, 6: 2699,  12: 4999 } },
+  pragati:  { label: 'Pragati — up to 100',   plan: 'Pragati',  students: 100, tests: 4, prices: { 1: 800,  3: 2249, 6: 4299,  12: 7999 } },
+  utkarsh:  { label: 'Utkarsh — up to 200',   plan: 'Utkarsh',  students: 200, tests: 4, prices: { 1: 1300, 3: 3699, 6: 6999,  12: 12999 } },
+  shikhar:  { label: 'Shikhar — up to 500',   plan: 'Shikhar',  students: 500, tests: 4, prices: { 1: 2500, 3: 7099, 6: 13499, 12: 24999 } }
+};
+function istToday(){
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const [y, m, d] = p.split('-').map(Number);
+  return { y, m, d };
+}
+function addDaysYMD(t, n){ const dt = new Date(Date.UTC(t.y, t.m - 1, t.d + n)); return { y: dt.getUTCFullYear(), m: dt.getUTCMonth() + 1, d: dt.getUTCDate() }; }
+function addMonthsYMD(t, n){
+  const total = (t.m - 1) + n, y = t.y + Math.floor(total / 12), m = (total % 12) + 1;
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return { y, m, d: Math.min(t.d, last) };
+}
+function ymdStr(t){ return `${t.y}-${String(t.m).padStart(2, '0')}-${String(t.d).padStart(2, '0')}`; }
+function ymdFromIso(iso){
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
+  const [y, m, d] = p.split('-').map(Number); return { y, m, d };
+}
 function fmtDate(d){ return d ? new Date(d).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : '—'; }
 function statusPill(i){
   if (i.status !== 'active') return '<span class="pill suspended">SUSPENDED</span>';
@@ -542,7 +566,26 @@ function renderList(){
         <button class="btn btn-primary" data-act="save">💾 Save</button>
         ${i.code === 'VIDYAPATH' ? '' : `
         <div class="sub-box">
-          <label>Subscription</label>
+          <label>Apply a plan</label>
+          <div class="grid">
+            <div><label>Plan</label>
+              <select class="sel" data-f="preset" style="width:100%;">
+                ${Object.keys(PLAN_PRESETS).map(k => `<option value="${k}">${PLAN_PRESETS[k].label}</option>`).join('')}
+              </select></div>
+            <div><label>Duration</label>
+              <select class="sel" data-f="months" style="width:100%;">
+                <option value="1">1 month</option><option value="3">3 months</option>
+                <option value="6">6 months</option><option value="12">12 months</option>
+              </select></div>
+            <div><label>Start</label>
+              <select class="sel" data-f="startmode" style="width:100%;">
+                <option value="today">From today</option>
+                <option value="renew">After the current plan ends (renewal)</option>
+              </select></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" data-act="applyplan">✅ Apply plan</button></div>
+          <div class="err" data-f="planerr"></div>
+          <label style="margin-top:16px;">Subscription</label>
           <div class="grid">
             <div><label>Plan name</label><input data-f="plan" value="${esc(i.plan || '')}" placeholder="e.g. Basic, Pro"></div>
             <div><label>Access valid until (blank = no expiry)</label><input data-f="expires" type="date" value="${i.plan_expires_at ? String(i.plan_expires_at).slice(0,10) : ''}"></div>
@@ -641,6 +684,45 @@ $('inst-list').addEventListener('click', async (e) => {
     const base = (inst.plan_expires_at && !inst.expired) ? new Date(inst.plan_expires_at) : new Date();
     base.setDate(base.getDate() + (act === 'plus30' ? 30 : 365));
     f.value = base.toISOString().slice(0, 10);
+    return;
+  }
+
+  if (act === 'applyplan'){
+    const errEl = card.querySelector('[data-f="planerr"]'); errEl.textContent = '';
+    const key = card.querySelector('[data-f="preset"]').value;
+    const p = PLAN_PRESETS[key];
+    const months = Number(card.querySelector('[data-f="months"]').value);
+    const mode = card.querySelector('[data-f="startmode"]').value;
+    let start = istToday();
+    if (mode === 'renew'){
+      if (!inst.plan_expires_at || inst.expired){ errEl.textContent = 'This institute has no running plan; choose "From today".'; return; }
+      start = addDaysYMD(ymdFromIso(inst.plan_expires_at), 1);
+    }
+    const lastDay = p.days ? addDaysYMD(start, p.days - 1) : addDaysYMD(addMonthsYMD(start, months), -1);
+    const expiresIso = new Date(ymdStr(lastDay) + 'T23:59:59+05:30').toISOString();
+    const price = p.prices ? p.prices[months] : 0;
+    const durationText = p.days ? `${p.days} days` : `${months} month${months > 1 ? 's' : ''}`;
+    if ((inst.students || 0) > p.students &&
+        !confirm(`Note: ${inst.name} already has ${inst.students} students, more than this plan's limit of ${p.students}. Existing students keep access, but no new students can register. Continue?`)) return;
+    if (!confirm(`Apply this plan to "${inst.name}"?\n\nPlan: ${p.plan} (${durationText})\nStudents: up to ${p.students}\nLive tests: ${p.tests} per month\nValid: ${fmtDate(ymdStr(start))} to ${fmtDate(ymdStr(lastDay))}\nPrice: ${price ? '₹' + price.toLocaleString('en-IN') : 'Free'}`)) return;
+    btn.disabled = true;
+    try{
+      const r1 = await rpc('sa_web_update_institute', { ...creds(), p_code: inst.code,
+        p_name: inst.name, p_short_name: inst.short_name || '', p_max_students: p.students,
+        p_contact_phone: inst.contact_phone || '', p_contact_email: inst.contact_email || '',
+        p_logo_url: inst.logo_url || '', p_primary_color: inst.primary_color || '' });
+      if (handleAuthError(r1)) return;
+      if (!r1 || !r1.ok){ errEl.textContent = (r1 && r1.error) || 'Unable to set the student limit.'; return; }
+      const r2 = await rpc('sa_web_set_subscription', { ...creds(), p_code: inst.code, p_plan: p.plan, p_expires_at: expiresIso });
+      if (handleAuthError(r2)) return;
+      if (!r2 || !r2.ok){ errEl.textContent = (r2 && r2.error) || 'Unable to set the plan dates.'; return; }
+      const r3 = await rpc('sa_web_set_test_quota', { ...creds(), p_code: inst.code, p_tests_per_cycle: p.tests, p_cycle_anchor: ymdStr(start) });
+      if (handleAuthError(r3)) return;
+      if (!r3 || !r3.ok){ errEl.textContent = (r3 && r3.error) || 'Unable to set the live-test plan.'; return; }
+      toast(`${p.plan} applied to ${inst.name} until ${fmtDate(ymdStr(lastDay))}.`, 'ok');
+      loadList();
+    }catch(_e){ errEl.textContent = 'Connection error. Please check the institute and try again.'; }
+    finally{ btn.disabled = false; }
     return;
   }
 
