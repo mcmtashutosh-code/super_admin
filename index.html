@@ -473,6 +473,12 @@ function accessText(i){
   if (i.expired) return `Expired on ${fmtDate(i.plan_expires_at)}`;
   return `Until ${fmtDate(i.plan_expires_at)} (${i.days_left} day${i.days_left === 1 ? '' : 's'} left)`;
 }
+function quotaText(i){
+  const q = i.quota || {};
+  if (q.limit === null || q.limit === undefined) return `Unlimited (${q.used || 0} this cycle)`;
+  const total = q.limit + (q.extra || 0);
+  return `${q.used} of ${total} used · ${q.remaining} left · cycle ends ${fmtDate(q.cycle_end)}`;
+}
 function renderList(){
   $('st-inst').textContent = institutes.length;
   $('st-active').textContent = institutes.filter(i => i.status === 'active').length;
@@ -499,6 +505,7 @@ function renderList(){
       <div class="nums" style="margin-top:6px;">
         <span>Plan: <b>${esc(i.plan || 'free')}</b></span>
         <span>Access: <b>${accessText(i)}</b></span>
+        <span>Live tests: <b>${quotaText(i)}</b></span>
       </div>
       <div class="link-row">
         <input readonly value="${esc(studentLink(i))}">
@@ -547,6 +554,16 @@ function renderList(){
             <button class="btn btn-primary" data-act="savesub">💾 Save subscription</button>
           </div>
           <div class="err" data-f="suberr"></div>
+          <label style="margin-top:16px;">Live tests per billing cycle</label>
+          <div class="grid">
+            <div><label>Tests per month (blank = unlimited)</label><input data-f="tests" type="number" min="0" value="${i.quota && i.quota.limit !== null && i.quota.limit !== undefined ? i.quota.limit : ''}"></div>
+            <div><label>Billing cycle start date</label><input data-f="anchor" type="date" value="${i.cycle_anchor ? String(i.cycle_anchor).slice(0,10) : ''}"></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" data-act="savequota">💾 Save live-test plan</button>
+            <button class="btn" data-act="topup">➕ Add extra tests (this cycle)</button>
+          </div>
+          <div class="err" data-f="quotaerr"></div>
         </div>`}
       </div>
     </div>`).join('');
@@ -624,6 +641,36 @@ $('inst-list').addEventListener('click', async (e) => {
     const base = (inst.plan_expires_at && !inst.expired) ? new Date(inst.plan_expires_at) : new Date();
     base.setDate(base.getDate() + (act === 'plus30' ? 30 : 365));
     f.value = base.toISOString().slice(0, 10);
+    return;
+  }
+
+  if (act === 'savequota'){
+    const errEl = card.querySelector('[data-f="quotaerr"]'); errEl.textContent = '';
+    const raw = card.querySelector('[data-f="tests"]').value.trim();
+    const anchor = card.querySelector('[data-f="anchor"]').value || null;
+    if (raw !== '' && (!/^\d+$/.test(raw))){ errEl.textContent = 'Enter a whole number, or leave blank for unlimited.'; return; }
+    btn.disabled = true;
+    try{
+      const r = await rpc('sa_web_set_test_quota', { ...creds(), p_code: inst.code, p_tests_per_cycle: raw === '' ? null : Number(raw), p_cycle_anchor: anchor });
+      if (handleAuthError(r)) return;
+      if (r && r.ok){ toast('Live-test plan saved.', 'ok'); loadList(); }
+      else errEl.textContent = (r && r.error) || 'Unable to save.';
+    }catch(_e){ errEl.textContent = 'Connection error.'; }
+    finally{ btn.disabled = false; }
+    return;
+  }
+
+  if (act === 'topup'){
+    const n = prompt(`How many extra live tests for "${inst.name}" in the current billing cycle? (1–100)`);
+    if (n === null) return;
+    if (!/^\d+$/.test(n.trim()) || Number(n) < 1 || Number(n) > 100){ toast('Enter a number between 1 and 100.', 'err'); return; }
+    const note = prompt('Note (optional), e.g. payment reference:') || '';
+    try{
+      const r = await rpc('sa_web_add_test_topup', { ...creds(), p_code: inst.code, p_extra: Number(n), p_note: note });
+      if (handleAuthError(r)) return;
+      if (r && r.ok){ toast(`${n} extra test(s) added. ${r.remaining} remaining this cycle.`, 'ok'); loadList(); }
+      else toast((r && r.error) || 'Unable to add tests.', 'err');
+    }catch(_e){ toast('Connection error.', 'err'); }
     return;
   }
 
