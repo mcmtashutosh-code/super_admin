@@ -264,6 +264,28 @@
     </div>
 
     <div class="card">
+      <details id="email-box">
+        <summary>✉️ Email institutes</summary>
+        <p class="muted" style="margin:10px 0 0;">Emails are sent from the platform Gmail account to each institute's contact email. Every institute receives its own copy.</p>
+        <label>Recipients</label>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+          <button class="btn" id="btn-em-all" type="button">Select all active</button>
+          <button class="btn" id="btn-em-none" type="button">Clear</button>
+        </div>
+        <div id="em-list" style="max-height:220px; overflow:auto; border:1px solid var(--line-soft); border-radius:10px; padding:8px 12px;"></div>
+        <label>Subject</label>
+        <input id="em-subject" maxlength="150" placeholder="e.g. Scheduled maintenance on Sunday">
+        <label>Message</label>
+        <textarea id="em-message" maxlength="10000" style="min-height:160px;" placeholder="Write your message. Each email begins with “Dear &lt;institute&gt; team,” and ends with the platform signature."></textarea>
+        <div class="err" id="em-err"></div>
+        <button class="btn btn-primary" id="btn-em-send" style="margin-top:6px;">Send email</button>
+        <div id="em-result" style="margin-top:10px;"></div>
+        <label style="margin-top:16px;">Recent emails</label>
+        <div id="em-log"><p class="muted">—</p></div>
+      </details>
+    </div>
+
+    <div class="card">
       <details id="report-box">
         <summary>📊 Activity report</summary>
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px;">
@@ -538,6 +560,7 @@ function renderList(){
       <div class="btn-row">
         <button class="btn" data-act="edit">✏️ Edit details</button>
         <button class="btn" data-act="reset">🔑 Reset admin password</button>
+        <button class="btn" data-act="email">✉️ Email</button>
         ${i.code === 'VIDYAPATH' ? '' : '<button class="btn" data-act="regen">🔄 Regenerate link</button>'}
         ${i.code === 'VIDYAPATH' ? '' : (i.status === 'active'
           ? '<button class="btn btn-danger" data-act="suspend">⏸ Suspend</button>'
@@ -632,6 +655,15 @@ $('inst-list').addEventListener('click', async (e) => {
     return;
   }
   if (act === 'edit'){ card.querySelector('.edit-box').classList.toggle('hidden'); return; }
+
+  if (act === 'email'){
+    if (!inst.contact_email){ toast('This institute has no contact email. Add one in Edit details first.', 'err'); return; }
+    renderEmailList([inst.code]);
+    $('email-box').open = true;
+    $('email-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => $('em-subject').focus(), 400);
+    return;
+  }
 
   if (act === 'regen'){
     if (!confirm(`Generate a new registration link for "${inst.name}"?\n\nThe current link will stop working immediately. Existing students will need the new link to sign in, so please share it with the institute.`)) return;
@@ -889,6 +921,61 @@ $('btn-tk-status').addEventListener('click', async () => {
     if (r && r.ok){ toast('Status updated.', 'ok'); openTicket(tkCurrent); }
     else $('tk-err').textContent = (r && r.error) || 'Unable to update status.';
   }catch(_e){ $('tk-err').textContent = 'Connection error.'; }
+});
+
+/* ---------------- EMAIL INSTITUTES ---------------- */
+function renderEmailList(checkedCodes){
+  const checked = new Set(checkedCodes || []);
+  $('em-list').innerHTML = institutes.length ? institutes.map(i => {
+    const has = !!(i.contact_email && String(i.contact_email).trim());
+    return `<label style="display:flex; gap:10px; align-items:center; text-transform:none; letter-spacing:0; font-weight:500; margin:6px 0; color:${has ? 'var(--text)' : 'var(--text-dim)'};">
+      <input type="checkbox" class="em-chk" value="${esc(i.code)}" style="width:auto;" ${has ? '' : 'disabled'} ${has && checked.has(i.code) ? 'checked' : ''}>
+      <span>${esc(i.name)} <span class="muted">(${esc(i.code)})</span> — ${has ? esc(i.contact_email) : '<i>no contact email</i>'}${i.status !== 'active' ? ' · <i>suspended</i>' : ''}</span>
+    </label>`; }).join('') : '<p class="muted">No institutes.</p>';
+}
+async function loadEmailLog(){
+  try{
+    const r = await rpc('sa_web_email_log', creds());
+    if (handleAuthError(r)) return;
+    if (!r || !r.ok || !r.rows.length){ $('em-log').innerHTML = '<p class="muted">No emails sent yet.</p>'; return; }
+    $('em-log').innerHTML = r.rows.map(x => `<div class="muted" style="font-size:13px; margin:4px 0;">
+      ${esc(new Date(x.sent_at).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }))} · <b style="color:var(--text);">${esc(x.subject)}</b> · ${x.sent ?? 0}/${x.recipients} sent${x.failed ? ` · ${x.failed} failed` : ''}</div>`).join('');
+  }catch(_e){ $('em-log').innerHTML = '<p class="muted">Unable to load.</p>'; }
+}
+$('email-box').addEventListener('toggle', () => {
+  if (!$('email-box').open) return;
+  if (!$('em-list').children.length) renderEmailList([]);
+  loadEmailLog();
+});
+$('btn-em-all').addEventListener('click', () => renderEmailList(institutes.filter(i => i.status === 'active').map(i => i.code)));
+$('btn-em-none').addEventListener('click', () => renderEmailList([]));
+$('btn-em-send').addEventListener('click', async () => {
+  const errEl = $('em-err'); errEl.textContent = ''; $('em-result').innerHTML = '';
+  const codes = [...document.querySelectorAll('.em-chk:checked')].map(c => c.value);
+  const subject = $('em-subject').value.trim();
+  const message = $('em-message').value.trim();
+  if (!codes.length){ errEl.textContent = 'Please choose at least one institute.'; return; }
+  if (subject.length < 3){ errEl.textContent = 'Please enter a subject (at least 3 characters).'; return; }
+  if (message.length < 5){ errEl.textContent = 'Please write a message.'; return; }
+  if (!confirm(`Send "${subject}" to ${codes.length} institute(s)?`)) return;
+  const btn = $('btn-em-send'); btn.disabled = true; btn.textContent = 'Sending...';
+  try{
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/platform-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+      body: JSON.stringify({ username: sa.u, password: sa.p, codes, subject, message })
+    });
+    const r = await res.json();
+    if (r && (r.error === 'invalid' || r.error === 'locked')){ handleAuthError(r); return; }
+    if (!r || !r.ok){ errEl.textContent = (r && r.error && r.error !== 'server_error') ? r.error : 'Unable to send the email. Please try again.'; return; }
+    const parts = [`<b>${r.sent}</b> email(s) sent.`];
+    if (r.failed && r.failed.length) parts.push(`Failed: ${r.failed.map(f => esc(f.name)).join(', ')}.`);
+    if (r.missing && r.missing.length) parts.push(`Skipped (no contact email): ${r.missing.map(m => esc(m.name)).join(', ')}.`);
+    $('em-result').innerHTML = `<p class="muted" style="color:var(--text);">${parts.join(' ')}</p>`;
+    if (r.sent){ toast(`${r.sent} email(s) sent.`, 'ok'); $('em-subject').value = ''; $('em-message').value = ''; }
+    loadEmailLog();
+  }catch(_e){ errEl.textContent = 'Connection error. Please try again.'; }
+  finally{ btn.disabled = false; btn.textContent = 'Send email'; }
 });
 
 /* ---------------- ACTIVITY REPORT ---------------- */
