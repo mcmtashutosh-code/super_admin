@@ -285,6 +285,7 @@
         <button class="btn btn-primary" id="btn-em-send" style="margin-top:6px;">Send email</button>
         <div id="em-result" style="margin-top:10px;"></div>
         <label style="margin-top:16px;">Recent emails</label>
+        <p class="muted" style="margin:0 0 6px; font-size:12px;">Records and dashboard messages older than 12 months are removed automatically.</p>
         <div id="em-log"><p class="muted">—</p></div>
       </details>
     </div>
@@ -955,14 +956,30 @@ async function loadEmailLog(){
     const r = await rpc('sa_web_email_log', creds());
     if (handleAuthError(r)) return;
     if (!r || !r.ok || !r.rows.length){ $('em-log').innerHTML = '<p class="muted">No emails sent yet.</p>'; return; }
-    $('em-log').innerHTML = r.rows.map(x => `<div class="muted" style="font-size:13px; margin:4px 0;">
-      ${esc(new Date(x.sent_at).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }))} · <b style="color:var(--text);">${esc(x.subject)}</b> · ${x.sent ?? 0}/${x.recipients} emailed${x.posted ? ` · ${x.posted} in dashboards` : ''}${x.failed ? ` · ${x.failed} failed` : ''}</div>`).join('');
+    $('em-log').innerHTML = r.rows.map(x => `<div class="muted" style="font-size:13px; margin:4px 0; display:flex; gap:8px; align-items:center;">
+      <span style="flex:1;">${esc(new Date(x.sent_at).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }))} · <b style="color:var(--text);">${esc(x.subject)}</b> · ${x.sent ?? 0}/${x.recipients} emailed${x.posted ? ` · ${x.posted} in dashboards` : ''}${x.failed ? ` · ${x.failed} failed` : ''}</span>
+      <button class="btn btn-danger em-del" data-id="${x.id}" data-posted="${x.posted || 0}" data-subject="${esc(x.subject)}" title="Delete this record" style="padding:4px 9px;">🗑</button></div>`).join('');
   }catch(_e){ $('em-log').innerHTML = '<p class="muted">Unable to load.</p>'; }
 }
 $('email-box').addEventListener('toggle', () => {
   if (!$('email-box').open) return;
   if (!$('em-list').children.length) renderEmailList([]);
   loadEmailLog();
+});
+$('em-log').addEventListener('click', async (e) => {
+  const b = e.target.closest('.em-del'); if (!b) return;
+  if (!confirm(`Delete the record of "${b.dataset.subject}"?`)) return;
+  let removeDash = false;
+  if (Number(b.dataset.posted) > 0){
+    removeDash = confirm('Also remove this message from the institutes\' admin dashboards?\n\nOK = remove it from the dashboards too\nCancel = keep it in the dashboards');
+  }
+  b.disabled = true;
+  try{
+    const r = await rpc('sa_web_email_delete', { ...creds(), p_log_id: Number(b.dataset.id), p_remove_from_dashboards: removeDash });
+    if (handleAuthError(r)) return;
+    if (r && r.ok){ toast(removeDash ? 'Record and dashboard messages deleted.' : 'Record deleted.', 'ok'); loadEmailLog(); }
+    else { toast((r && r.error) || 'Unable to delete.', 'err'); b.disabled = false; }
+  }catch(_e){ toast('Connection error.', 'err'); b.disabled = false; }
 });
 $('btn-em-all').addEventListener('click', () => renderEmailList(institutes.filter(i => i.status === 'active').map(i => i.code)));
 $('btn-em-none').addEventListener('click', () => renderEmailList([]));
