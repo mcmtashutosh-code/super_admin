@@ -69,6 +69,24 @@
   .pill.warn{ background:#f39c1233; color:#f5b041; }
   .pill.grey{ background:#7f8c8d33; color:#aab7b8; } .pill.blue{ background:#3498db33; color:#5dade2; } .pill.neutral{ background:#8e44ad33; color:#c39bd3; }
   table.report td.num, table.report th.num{ text-align:right; }
+  .rev-bar{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin-top:12px; }
+  .rev-bar label{ margin-top:0; } .rev-bar input, .rev-bar select{ width:100%; }
+  .rev-tabs{ display:flex; gap:6px; flex-wrap:wrap; margin:16px 0 4px; border-bottom:1px solid var(--line-soft); padding-bottom:8px; }
+  .rev-tab{ background:transparent; border:1px solid var(--line-soft); color:var(--text-dim); border-radius:20px; padding:7px 14px; font:inherit; font-size:13px; cursor:pointer; }
+  .rev-tab.on{ background:var(--accent); border-color:var(--accent); color:#06231e; font-weight:600; }
+  .kpis{ display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-top:12px; }
+  .kpi{ border:1px solid var(--line-soft); border-radius:12px; padding:12px 14px; background:var(--field); cursor:help; }
+  .kpi .kl{ display:block; font-size:12px; color:var(--text-dim); }
+  .kpi b{ display:block; font-size:20px; margin:4px 0 2px; font-family:Sora,sans-serif; }
+  .kpi .kc{ display:block; font-size:11.5px; color:var(--text-dim); }
+  .kpi .up{ color:#5dcaa5; } .kpi .down{ color:#ff8a7d; }
+  .chart{ display:flex; align-items:flex-end; gap:6px; height:170px; overflow-x:auto; padding-top:18px; margin-top:8px; }
+  .chart .col{ flex:1 0 38px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+  .chart .bar{ width:70%; min-height:2px; border-radius:5px 5px 0 0; background:var(--accent); }
+  .chart .bar.mrr{ background:#5dade2; } .chart .bar.none{ background:transparent; border:1px dashed var(--line-soft); height:30px; }
+  .chart .v{ font-size:10.5px; color:var(--text-dim); margin-bottom:3px; white-space:nowrap; }
+  .chart .l{ font-size:10.5px; color:var(--text-dim); margin-top:4px; white-space:nowrap; }
+  @media (max-width:720px){ .kpis{ grid-template-columns:1fr 1fr; } }
   .sub-box{ margin-top:14px; border-top:1px solid var(--line-soft); padding-top:4px; }
   .report-wrap{ overflow-x:auto; margin-top:12px; }
   table.report{ width:100%; border-collapse:collapse; font-size:13px; min-width:680px; }
@@ -319,21 +337,34 @@
         </div>
 
         <div id="rev-open" class="hidden">
-          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-top:12px;">
-            <div><label style="margin-top:0;">View by</label>
-              <select class="sel" id="rev-g">
-                <option value="month">Monthly</option>
-                <option value="quarter">Quarterly</option>
-                <option value="half">Half-yearly</option>
-                <option value="year">Yearly</option>
+          <div class="rev-bar">
+            <div><label>Period</label>
+              <select class="sel" id="rev-preset">
+                <option value="today">Today</option><option value="yesterday">Yesterday</option>
+                <option value="this_week">This week</option><option value="this_month" selected>This month</option>
+                <option value="last_month">Last month</option><option value="this_quarter">This quarter</option>
+                <option value="this_fy">This financial year</option><option value="this_year">This year</option>
+                <option value="last_year">Last year</option><option value="custom">Custom range</option>
               </select></div>
-            <div><label style="margin-top:0;">From</label><input id="rev-from" type="date" style="width:auto;"></div>
-            <div><label style="margin-top:0;">To</label><input id="rev-to" type="date" style="width:auto;"></div>
-            <button class="btn btn-primary" id="btn-rev-load">Load</button>
+            <div><label>From</label><input id="rev-from" type="date"></div>
+            <div><label>To</label><input id="rev-to" type="date"></div>
+            <div><label>View by</label>
+              <select class="sel" id="rev-g">
+                <option value="day">Day</option><option value="week">Week</option><option value="month" selected>Month</option>
+                <option value="quarter">Quarter</option><option value="half">Half-year</option><option value="year">Year</option>
+              </select></div>
+            <div><label>Institute</label><select class="sel" id="rev-f-inst"><option value="">All institutes</option></select></div>
+            <div><label>Plan</label><select class="sel" id="rev-f-plan"><option value="">All plans</option></select></div>
+            <div><label>Payment method</label>
+              <select class="sel" id="rev-f-method"><option value="">All methods</option><option>UPI</option><option>Bank transfer</option><option>Cash</option><option>Cheque</option><option>Card</option><option>Payment gateway</option><option>Other</option></select></div>
+          </div>
+          <div class="btn-row" style="margin-top:8px;">
+            <button class="btn btn-primary" id="btn-rev-load">🔄 Load</button>
             <button class="btn" id="btn-rev-pdf">📄 PDF / Print</button>
             <button class="btn" id="btn-rev-chpin">🔑 Change PIN</button>
             <button class="btn" id="btn-rev-lock">🔒 Lock</button>
           </div>
+          <p class="muted" id="rev-range-note" style="font-size:12px; margin:6px 0 0;"></p>
           <div class="card hidden" id="rev-chpin-box" style="margin-top:12px; max-width:520px;">
             <b>🔑 Change revenue PIN</b>
             <label>Current PIN</label><input id="chpin-old" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
@@ -348,22 +379,64 @@
             </div>
           </div>
 
-          <div class="stats" style="margin-top:14px; grid-template-columns:repeat(4, 1fr);">
-            <div class="stat" title="Payments received in the selected range (void excluded) minus refunds made in the range"><b id="rev-total">–</b><span>Cash collected (net)</span><span id="rev-refunds" style="font-size:11px;"></span></div>
-            <div class="stat"><b id="rev-count">–</b><span>Payments</span></div>
-            <div class="stat" title="Monthly value of active, paying subscriptions (special price or plan price ÷ billing months). Not the same as cash."><b id="rev-mrr">–</b><span>Current MRR</span><span id="rev-mrr-note" style="font-size:11px;"></span></div>
-            <div class="stat"><b id="rev-due">–</b><span>Expiring / expired</span></div>
+          <div class="rev-tabs">
+            <button class="rev-tab on" data-tab="ov">Overview</button>
+            <button class="rev-tab" data-tab="subs">Subscriptions</button>
+            <button class="rev-tab" data-tab="pays">Payments</button>
+            <button class="rev-tab" data-tab="plans">Plans &amp; pricing</button>
+            <button class="rev-tab" data-tab="audit">Audit log</button>
           </div>
 
-          <label>Revenue by period</label>
-          <div class="report-wrap" id="rev-buckets"></div>
+          <div class="rev-pane" data-pane="ov">
+          <div class="kpis">
+            <div class="kpi" id="k-cash" title="Payments received in the selected period (void excluded) minus refunds made in the period. Compared with the previous period of the same length."><span class="kl">Cash collected</span><b>–</b><span class="kc"></span></div>
+            <div class="kpi" id="k-mrr" title="Current MRR: monthly value (special price or plan price ÷ billing months) of active, paying subscriptions. It is not the same as cash. Compared with the MRR snapshot at the end of the previous period."><span class="kl">Current MRR</span><b>–</b><span class="kc"></span></div>
+            <div class="kpi" id="k-paid" title="Customer institutes that have paid at least once and whose access is active or expiring soon."><span class="kl">Active paid institutes</span><b>–</b><span class="kc"></span></div>
+            <div class="kpi" id="k-total" title="All customer institutes (the main institute is not counted)."><span class="kl">Total institutes</span><b>–</b><span class="kc"></span></div>
+            <div class="kpi" id="k-due7" title="Paying institutes whose access ends within the next 7 days, and their total renewal price."><span class="kl">Renewals due in 7 days</span><b>–</b><span class="kc"></span></div>
+            <div class="kpi" id="k-exp" title="Institutes whose access has ended / institutes that are suspended."><span class="kl">Expired / suspended</span><b>–</b><span class="kc"></span></div>
+            <div class="kpi" id="k-trial" title="Institutes currently in a trial period. Trials are not in use yet."><span class="kl">Trial institutes</span><b>–</b><span class="kc"></span></div>
+            <div class="kpi" id="k-out" title="Renewal price of paying institutes whose access has ended and that are not suspended or cancelled."><span class="kl">Outstanding amount</span><b>–</b><span class="kc"></span></div>
+          </div>
 
-          <label>Revenue by institute (selected range)</label>
+          <div class="grid" style="margin-top:6px;">
+            <div class="card" style="margin-top:10px;"><b>Cash collection</b><div class="chart" id="rev-cash-chart"></div></div>
+            <div class="card" style="margin-top:10px;"><b>MRR</b><div class="chart" id="rev-mrr-chart"></div></div>
+          </div>
+
+          <label>Revenue by plan</label>
+          <div class="report-wrap" id="rev-byplan"></div>
+
+          <label>Payment method breakdown</label>
+          <div class="report-wrap" id="rev-bymethod"></div>
+
+          <label>Renewals due (overdue and next 7 days)</label>
+          <div class="report-wrap" id="rev-renewals"></div>
+
+          <label>Recent payments</label>
+          <div class="report-wrap" id="rev-recent"></div>
+
+          <label>Revenue by institute (selected period)</label>
           <div class="report-wrap" id="rev-inst"></div>
 
-          <label>Recharge status</label>
-          <div class="report-wrap" id="rev-status"></div>
+          </div>
 
+          <div class="rev-pane hidden" data-pane="subs">
+          <label>Subscriptions and recharge status</label>
+          <div class="report-wrap" id="rev-status"></div>
+          <div class="grid" style="margin-top:8px;">
+            <div class="card" style="margin-top:10px;">
+              <b>🏷 Institute plan and price</b>
+              <label>Institute</label><select class="sel" id="ip-inst" style="width:100%;"></select>
+              <label>Plan</label><select class="sel" id="ip-plan" style="width:100%;"></select>
+              <label>Special price (₹, blank = plan price)</label><input id="ip-price" type="number" min="0" step="0.01">
+              <div class="err" id="ip-err"></div>
+              <button class="btn btn-primary" id="btn-ip-save" style="margin-top:6px;">Save</button>
+            </div>
+          </div>
+          </div>
+
+          <div class="rev-pane hidden" data-pane="pays">
           <div class="grid" style="margin-top:8px;">
             <div class="card" style="margin-top:10px;">
               <b>➕ Record a payment / recharge</b>
@@ -391,17 +464,13 @@
               <button class="btn btn-primary" id="btn-pay-save" style="margin-top:6px;">Save payment</button>
               <div id="pay-ok"></div>
             </div>
-
-            <div class="card" style="margin-top:10px;">
-              <b>🏷 Institute plan and price</b>
-              <label>Institute</label><select class="sel" id="ip-inst" style="width:100%;"></select>
-              <label>Plan</label><select class="sel" id="ip-plan" style="width:100%;"></select>
-              <label>Special price (₹, blank = plan price)</label><input id="ip-price" type="number" min="0" step="0.01">
-              <div class="err" id="ip-err"></div>
-              <button class="btn btn-primary" id="btn-ip-save" style="margin-top:6px;">Save</button>
-            </div>
+          </div>
+          <label>Payments (selected range)</label>
+          <p class="muted" style="font-size:12px; margin:0;">Payments are never deleted. Use <b>Void</b> for a payment entered by mistake, or <b>Refund</b> when money was returned.</p>
+          <div class="report-wrap" id="rev-payments"></div>
           </div>
 
+          <div class="rev-pane hidden" data-pane="plans">
           <label>Plans and prices</label>
           <div class="report-wrap" id="rev-plans"></div>
           <div class="card" style="margin-top:10px;">
@@ -426,11 +495,9 @@
             </div>
             <p class="muted" style="font-size:12px; margin:8px 0 0;">Changing a price affects future payments only; recorded payments keep their amounts.</p>
           </div>
+          </div>
 
-          <label>Payments (selected range)</label>
-          <p class="muted" style="font-size:12px; margin:0;">Payments are never deleted. Use <b>Void</b> for a payment entered by mistake, or <b>Refund</b> when money was returned.</p>
-          <div class="report-wrap" id="rev-payments"></div>
-
+          <div class="rev-pane hidden" data-pane="audit">
           <details style="margin-top:16px;">
             <summary>🗂 Subscription events</summary>
             <button class="btn" id="btn-events-load" style="margin-top:10px;">Load events</button>
@@ -442,6 +509,7 @@
             <button class="btn" id="btn-audit-load" style="margin-top:10px;">Load audit log</button>
             <div class="report-wrap" id="rev-audit"></div>
           </details>
+          </div>
         </div>
       </details>
     </div>
@@ -1176,6 +1244,7 @@ const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR',
 const inr = n => INR.format(Number(n || 0));
 const PERIOD_NAME = { 1: 'Monthly', 3: 'Quarterly', 6: 'Half-yearly', 12: 'Yearly' };
 const G_NAME = { month: 'Monthly', quarter: 'Quarterly', half: 'Half-yearly', year: 'Yearly' };
+const G_NAME2 = { day: 'day', week: 'week', month: 'month', quarter: 'quarter', half: 'half-year', year: 'year' };
 const REV_STATUS = { active: ['Active', 'active'], expiring: ['Expiring soon', 'warn'], expired: ['Expired', 'expired'],
                      suspended: ['Suspended', 'suspended'], no_end_date: ['No end date', 'active'], main: ['Main institute', 'active'] };
 function revCreds(){ return { p_username: sa.u, p_password: sa.p, p_pin: revPin }; }
@@ -1209,7 +1278,7 @@ function isoToday(){ const d = new Date(); return new Date(d.getTime() - d.getTi
 async function revOpenWith(pin, plans){
   revPin = pin;
   $('rev-locked').classList.add('hidden'); $('rev-open').classList.remove('hidden');
-  if (!$('rev-from').value) $('rev-from').value = fyStart();
+  if (!$('rev-from').value){ $('rev-preset').value = 'this_month'; applyPreset(); }
   if (!$('rev-to').value) $('rev-to').value = isoToday();
   if (!$('pay-date').value) $('pay-date').value = isoToday();
   revPlans = plans || [];
@@ -1305,14 +1374,19 @@ async function loadRevenue(){
   if (!revPin) return;
   revTouch();
   try{
-    const [r, pl] = await Promise.all([
-      rpc('sa_web_revenue', { ...revCreds(), p_granularity: $('rev-g').value, p_from: $('rev-from').value || null, p_to: $('rev-to').value || null }),
-      rpc('sa_web_plans', revCreds())
+    const from = $('rev-from').value || null, to = $('rev-to').value || null;
+    const [r, pl, ov] = await Promise.all([
+      rpc('sa_web_revenue', { ...revCreds(), p_granularity: 'month', p_from: from, p_to: to }),
+      rpc('sa_web_plans', revCreds()),
+      rpc('sa_web_rev_overview', { ...revCreds(), p_from: from, p_to: to, p_view: $('rev-g').value,
+        p_inst_code: $('rev-f-inst').value || null, p_plan_id: $('rev-f-plan').value ? Number($('rev-f-plan').value) : null,
+        p_method: $('rev-f-method').value || null })
     ]);
-    if (revAuthFail(r) || revAuthFail(pl)) return;
+    if (revAuthFail(r) || revAuthFail(pl) || revAuthFail(ov)) return;
     if (!r || !r.ok){ toast((r && r.error) || 'Unable to load revenue.', 'err'); return; }
-    revData = r; revPlans = (pl && pl.plans) || [];
-    renderRevenue();
+    if (!ov || !ov.ok){ toast((ov && ov.error) || 'Unable to load the overview.', 'err'); return; }
+    revData = r; revPlans = (pl && pl.plans) || []; revOv = ov;
+    renderRevenue(); fillFilterOptions(); renderOverview();
   }catch(_e){ toast('Connection error.', 'err'); }
 }
 
@@ -1326,18 +1400,6 @@ function acctBadges(s){
 }
 function renderRevenue(){
   const r = revData;
-  $('rev-total').textContent = inr(r.cash);
-  $('rev-count').textContent = r.count;
-  $('rev-mrr').textContent = inr(r.mrr);
-  $('rev-mrr-note').textContent = r.mrr_since ? `MRR tracked since ${dmy(r.mrr_since)}` : '';
-  $('rev-due').textContent = r.status.filter(s => s.status === 'expiring_soon' || s.status === 'expired').length;
-  $('rev-refunds').textContent = Number(r.refunds) > 0 ? `after ${inr(r.refunds)} refunds` : '';
-
-  const maxB = Math.max(1, ...r.buckets.map(b => Math.abs(Number(b.total))));
-  $('rev-buckets').innerHTML = `<table class="report"><thead><tr><th>${esc(G_NAME[r.granularity])} period</th><th>Payments</th><th class="num">Cash collected</th><th style="width:40%;"></th></tr></thead><tbody>` +
-    r.buckets.map(b => `<tr><td>${esc(b.label)}</td><td>${b.count}</td><td class="num"><b>${inr(b.total)}</b></td>
-      <td style="text-align:left;"><div style="height:10px; border-radius:5px; background:var(--accent); width:${Math.round(Math.max(0, Number(b.total)) * 100 / maxB)}%;"></div></td></tr>`).join('') +
-    `<tr><td><b>Total</b></td><td><b>${r.count}</b></td><td class="num"><b>${inr(r.cash)}</b></td><td></td></tr></tbody></table>`;
 
   $('rev-inst').innerHTML = r.by_institute.length ? `<table class="report"><thead><tr><th>Institute</th><th>Payments</th><th class="num">Cash collected</th><th class="num">Share</th></tr></thead><tbody>` +
     r.by_institute.map(x => `<tr><td>${esc(x.name)} <span class="muted">(${esc(x.code)})</span></td><td>${x.count}</td><td class="num"><b>${inr(x.total)}</b></td>
@@ -1590,8 +1652,134 @@ $('btn-plan-save').addEventListener('click', async () => {
   }catch(_e){ errEl.textContent = 'Connection error.'; }
 });
 
+/* ---------------- REVENUE OVERVIEW (R2) ---------------- */
+let revOv = null;
+const METHODS = ['UPI', 'Bank transfer', 'Cash', 'Cheque', 'Card', 'Payment gateway', 'Other'];
+function isoOf(d){ return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+function presetRange(k){
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  const y = t.getFullYear(), m = t.getMonth();
+  const D = (yy, mm, dd) => new Date(yy, mm, dd);
+  switch (k){
+    case 'today': return [isoOf(t), isoOf(t)];
+    case 'yesterday': { const d = D(y, m, t.getDate() - 1); return [isoOf(d), isoOf(d)]; }
+    case 'this_week': { const dow = (t.getDay() + 6) % 7; return [isoOf(D(y, m, t.getDate() - dow)), isoOf(t)]; }
+    case 'this_month': return [isoOf(D(y, m, 1)), isoOf(t)];
+    case 'last_month': return [isoOf(D(y, m - 1, 1)), isoOf(D(y, m, 0))];
+    case 'this_quarter': return [isoOf(D(y, Math.floor(m / 3) * 3, 1)), isoOf(t)];
+    case 'this_fy': { const fy = m >= 3 ? y : y - 1; return [isoOf(D(fy, 3, 1)), isoOf(t)]; }
+    case 'this_year': return [isoOf(D(y, 0, 1)), isoOf(t)];
+    case 'last_year': return [isoOf(D(y - 1, 0, 1)), isoOf(D(y - 1, 11, 31))];
+  }
+  return null;
+}
+function applyPreset(){
+  const r = presetRange($('rev-preset').value);
+  if (r){ $('rev-from').value = r[0]; $('rev-to').value = r[1]; }
+  const days = ($('rev-to').value && $('rev-from').value) ? (new Date($('rev-to').value) - new Date($('rev-from').value)) / 86400000 : 0;
+  if ($('rev-g').value === 'day' && days > 92) $('rev-g').value = 'month';
+  if (['today', 'yesterday', 'this_week'].includes($('rev-preset').value)) $('rev-g').value = 'day';
+}
+$('rev-preset').addEventListener('change', () => { applyPreset(); loadRevenue(); });
+['rev-from', 'rev-to'].forEach(id => $(id).addEventListener('change', () => { $('rev-preset').value = 'custom'; }));
+['rev-f-inst', 'rev-f-plan', 'rev-f-method'].forEach(id => $(id).addEventListener('change', () => loadRevenue()));
+document.querySelectorAll('.rev-tab').forEach(b => b.addEventListener('click', () => showRevTab(b.dataset.tab)));
+function showRevTab(t){
+  revTouch();
+  document.querySelectorAll('.rev-tab').forEach(x => x.classList.toggle('on', x.dataset.tab === t));
+  document.querySelectorAll('.rev-pane').forEach(x => x.classList.toggle('hidden', x.dataset.pane !== t));
+}
+function fillFilterOptions(){
+  const keepI = $('rev-f-inst').value, keepP = $('rev-f-plan').value;
+  $('rev-f-inst').innerHTML = '<option value="">All institutes</option>' + (revData ? revData.status.filter(s => s.account_type !== 'main')
+    .map(s => `<option value="${esc(s.code)}">${esc(s.name)}</option>`).join('') : '');
+  $('rev-f-plan').innerHTML = '<option value="">All plans</option>' + revPlans.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  $('rev-f-inst').value = keepI; $('rev-f-plan').value = keepP;
+}
+function changeText(cur, prev, isMoney){
+  if (prev === null || prev === undefined) return '<span>vs previous period: no data</span>';
+  cur = Number(cur); prev = Number(prev);
+  if (prev === 0) return cur === 0 ? '<span>no change vs previous period</span>' : `<span class="up">↑ new vs ${isMoney ? inr(0) : 0} previous period</span>`;
+  const pct = Math.round((cur - prev) * 1000 / Math.abs(prev)) / 10;
+  if (pct === 0) return '<span>no change vs previous period</span>';
+  return `<span class="${pct > 0 ? 'up' : 'down'}">${pct > 0 ? '↑' : '↓'} ${Math.abs(pct)}%</span> vs previous period`;
+}
+function setKpi(id, value, sub){ $(id).querySelector('b').innerHTML = value; $(id).querySelector('.kc').innerHTML = sub || ''; }
+function barChart(el, rows, key, cls, emptyNote){
+  const vals = rows.map(r => r[key]).filter(v => v !== null && v !== undefined).map(Number);
+  if (!rows.length || !vals.length){ el.innerHTML = `<p class="muted" style="align-self:center; margin:auto;">${emptyNote}</p>`; return; }
+  const max = Math.max(1, ...vals.map(Math.abs));
+  el.innerHTML = rows.map(r => {
+    const v = r[key];
+    if (v === null || v === undefined) return `<div class="col" title="${esc(r.label)}: no data"><span class="v">—</span><div class="bar none"></div><span class="l">${esc(r.label)}</span></div>`;
+    const h = Math.max(2, Math.round(Math.max(0, Number(v)) * 120 / max));
+    return `<div class="col" title="${esc(r.label)}: ${inr(v)}"><span class="v">${Number(v) >= 100000 ? '₹' + Math.round(Number(v) / 1000) + 'k' : inr(v).replace('.00', '')}</span><div class="bar ${cls}" style="height:${h}px;"></div><span class="l">${esc(r.label)}</span></div>`;
+  }).join('');
+}
+function waLink(r){
+  const digits = String(r.phone || '').replace(/\D/g, '');
+  if (digits.length < 10) return null;
+  const num = digits.length === 10 ? '91' + digits : digits;
+  const ended = r.days_left !== null && r.days_left <= 0;
+  const msg = `Dear ${r.name} team,\n\nYour Vidyapath CBT subscription${r.plan ? ' (' + r.plan + ')' : ''} ${ended ? 'expired on' : 'will expire on'} ${dmy(r.paid_until)}.${r.amount ? ' Renewal amount: ' + inr(r.amount) + '.' : ''}\n\nPlease renew to continue uninterrupted access for your students.\n\nRegards,\nVidyapath CBT Platform`;
+  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+}
+function renderOverview(){
+  const o = revOv; if (!o) return;
+  const k = o.kpi;
+  const f = o.filters || {};
+  const filtered = f.institute || f.plan_id || f.method;
+  $('rev-range-note').textContent = `${dmy(o.from)} to ${dmy(o.to)} · compared with ${dmy(o.prev_from)} to ${dmy(o.prev_to)}${filtered ? ' · filters applied' : ''}${o.mrr_since ? ' · MRR tracked since ' + dmy(o.mrr_since) : ''}`;
+  setKpi('k-cash', inr(k.cash), changeText(k.cash, k.cash_prev, true) + ` · ${k.payments} payment${k.payments === 1 ? '' : 's'}`);
+  setKpi('k-mrr', inr(k.mrr), (k.mrr_prev === null || k.mrr_prev === undefined ? '<span>vs previous period: no data</span>' : changeText(k.mrr, k.mrr_prev, true)) + ` · ARR ${inr(k.arr)}`);
+  setKpi('k-paid', k.active_paid, changeText(k.active_paid, k.active_paid_prev, false));
+  setKpi('k-total', k.total_institutes, 'customer accounts');
+  setKpi('k-due7', k.due7_count, k.due7_count ? `${inr(k.due7_amount)} due` : 'No renewals due in the next 7 days');
+  setKpi('k-exp', `${k.expired} / ${k.suspended}`, 'expired / suspended');
+  setKpi('k-trial', k.trial_in_use ? k.trial : '—', k.trial_in_use ? 'in trial now' : 'Trials not in use');
+  setKpi('k-out', inr(k.outstanding_amount), k.outstanding_count ? `${k.outstanding_count} account${k.outstanding_count === 1 ? '' : 's'} · oldest due ${dmy(k.oldest_due)}` : 'No overdue renewals');
+
+  barChart($('rev-cash-chart'), o.cash_trend, 'total', '', 'No payments found for the selected period.');
+  if (o.mrr_trend === null || o.mrr_trend === undefined) $('rev-mrr-chart').innerHTML = '<p class="muted" style="margin:auto;">The MRR trend is platform-wide. Clear the institute and plan filters to see it.</p>';
+  else barChart($('rev-mrr-chart'), o.mrr_trend, 'mrr', 'mrr', `No MRR history yet${o.mrr_since ? ' (tracking started ' + dmy(o.mrr_since) + ')' : ''}.`);
+
+  const totMrr = o.by_plan.reduce((a, x) => a + Number(x.mrr || 0), 0);
+  $('rev-byplan').innerHTML = o.by_plan.length ? `<table class="report"><thead><tr><th>Plan</th><th class="num">Active paying</th><th class="num">MRR</th><th class="num">Cash (period)</th><th class="num">Lifetime revenue</th><th class="num">Avg MRR / institute</th><th class="num">% of MRR</th></tr></thead><tbody>` +
+    o.by_plan.map(x => `<tr><td>${esc(x.plan)}${x.is_active ? '' : ' <span class="muted">(inactive)</span>'}</td><td class="num">${x.active_institutes}</td><td class="num"><b>${inr(x.mrr)}</b></td>
+      <td class="num">${inr(x.cash)}</td><td class="num">${inr(x.lifetime)}</td><td class="num">${x.active_institutes ? inr(Number(x.mrr) / x.active_institutes) : '—'}</td>
+      <td class="num">${totMrr > 0 ? Math.round(Number(x.mrr) * 1000 / totMrr) / 10 + '%' : '—'}</td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted">No plans configured.</p>';
+
+  const totM = o.by_method.reduce((a, x) => a + Number(x.amount), 0);
+  $('rev-bymethod').innerHTML = o.by_method.length ? `<table class="report"><thead><tr><th>Method</th><th class="num">Payments</th><th class="num">Amount</th><th class="num">Share</th><th style="width:35%;"></th></tr></thead><tbody>` +
+    o.by_method.map(x => { const pct = totM > 0 ? Math.round(Number(x.amount) * 1000 / totM) / 10 : 0;
+      return `<tr><td>${esc(x.method)}</td><td class="num">${x.count}</td><td class="num"><b>${inr(x.amount)}</b></td><td class="num">${pct}%</td>
+      <td style="text-align:left;"><div style="height:9px; border-radius:5px; background:var(--accent); width:${Math.max(0, pct)}%;"></div></td></tr>`; }).join('') + '</tbody></table>'
+    : '<p class="muted">No payments found for the selected period.</p>';
+
+  $('rev-renewals').innerHTML = o.renewals.length ? `<table class="report"><thead><tr><th>Institute</th><th>Plan</th><th class="num">Amount due</th><th>Due date</th><th class="num">Days</th><th>Last payment</th><th>Contact</th><th></th></tr></thead><tbody>` +
+    o.renewals.map(r => { const wa = waLink(r); const over = r.days_left <= 0;
+      return `<tr><td>${esc(r.name)}</td><td>${esc(r.plan || '—')}</td><td class="num"><b>${r.amount !== null && r.amount !== undefined ? inr(r.amount) : '—'}</b></td>
+      <td>${dmy(r.paid_until)}</td><td class="num" style="color:${over ? '#ff8a7d' : '#f5b041'};">${over ? Math.abs(r.days_left) + ' overdue' : r.days_left + ' left'}</td>
+      <td>${r.last_paid_on ? dmy(r.last_paid_on) : '—'}</td><td>${esc(r.phone || '—')}</td>
+      <td>${r.phone ? `<a class="btn" style="padding:4px 9px; text-decoration:none;" href="tel:${esc(String(r.phone).replace(/[^0-9+]/g, ''))}">📞 Call</a>` : ''}
+          ${wa ? `<a class="btn" style="padding:4px 9px; text-decoration:none;" target="_blank" rel="noopener" href="${esc(wa)}">💬 WhatsApp</a>` : ''}
+          <button class="btn ren-pay" data-code="${esc(r.code)}" style="padding:4px 9px;">➕ Record payment</button></td></tr>`; }).join('') + '</tbody></table>'
+    : '<p class="muted">No renewals due in the next 7 days and nothing overdue.</p>';
+
+  $('rev-recent').innerHTML = o.recent.length ? `<table class="report"><thead><tr><th>ID</th><th>Date</th><th>Institute</th><th class="num">Amount</th><th>Method</th><th>Plan</th><th>Status</th></tr></thead><tbody>` +
+    o.recent.map(p => { const st = PAY_STATUS[p.status] || [p.status, 'neutral'];
+      return `<tr><td>#${p.id}</td><td>${dmy(p.paid_on)}</td><td>${esc(p.name)}</td><td class="num"><b>${inr(p.amount)}</b></td><td>${esc(p.method || '—')}</td><td>${esc(p.plan || '—')}</td><td><span class="pill ${st[1]}">${esc(st[0])}</span></td></tr>`; }).join('') + '</tbody></table>'
+    : '<p class="muted">No payments recorded yet.</p>';
+}
+$('rev-renewals').addEventListener('click', (e) => {
+  const b = e.target.closest('.ren-pay'); if (!b) return;
+  showRevTab('pays'); $('pay-inst').value = b.dataset.code; prefillPayment();
+  $('pay-inst').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('pay-amount').focus();
+});
+
 $('btn-rev-pdf').addEventListener('click', () => {
-  if (!revData){ toast('Load the report first.', 'err'); return; }
+  if (!revData || !revOv){ toast('Load the report first.', 'err'); return; }
   revTouch();
   const r = revData, gen = new Date().toLocaleString('en-IN', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
   const tbl = (head, rows) => `<table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
@@ -1607,13 +1795,20 @@ $('btn-rev-pdf').addEventListener('click', () => {
       .r { text-align: right; } .foot { margin-top: 16px; font-size: 10px; color: #888; }
     </style></head><body>
     <h1>Vidyapath CBT — Revenue &amp; Subscriptions Report</h1>
-    <div class="sub">${esc(G_NAME[r.granularity])} view · ${dmy(r.from)} to ${dmy(r.to)} · generated ${esc(gen)} · Confidential</div>
-    <div class="sum"><div>Cash collected (net)<b>${inr(r.cash)}</b></div><div>Payments<b>${r.count}</b></div>
-      <div>Current MRR<b>${inr(r.mrr)}</b></div><div>Expiring / expired<b>${r.status.filter(s => s.status === 'expiring_soon' || s.status === 'expired').length}</b></div></div>
+    <div class="sub">${dmy(revOv.from)} to ${dmy(revOv.to)}${(revOv.filters.institute || revOv.filters.plan_id || revOv.filters.method) ? ' · filters applied' : ''} · generated ${esc(gen)} · Confidential</div>
+    <div class="sum"><div>Cash collected<b>${inr(revOv.kpi.cash)}</b></div><div>Current MRR<b>${inr(revOv.kpi.mrr)}</b></div>
+      <div>ARR<b>${inr(revOv.kpi.arr)}</b></div><div>Active paid institutes<b>${revOv.kpi.active_paid}</b></div></div>
+    <div class="sum"><div>Renewals due (7 days)<b>${revOv.kpi.due7_count} · ${inr(revOv.kpi.due7_amount)}</b></div><div>Expired / suspended<b>${revOv.kpi.expired} / ${revOv.kpi.suspended}</b></div>
+      <div>Outstanding<b>${inr(revOv.kpi.outstanding_amount)}</b></div><div>Total institutes<b>${revOv.kpi.total_institutes}</b></div></div>
     <div class="sub">Cash collected excludes void payments; refunds are subtracted on their refund date. MRR is the monthly value of active paying subscriptions${r.mrr_since ? ', tracked since ' + dmy(r.mrr_since) : ''}.</div>
-    <h2>Revenue by period</h2>
-    ${tbl(['Period', 'Payments', 'Cash collected'], r.buckets.map(b => `<tr><td>${esc(b.label)}</td><td>${b.count}</td><td class="r">${inr(b.total)}</td></tr>`)
-        .concat([`<tr><td><b>Total</b></td><td><b>${r.count}</b></td><td class="r"><b>${inr(r.cash)}</b></td></tr>`]))}
+    <h2>Cash collection by ${esc(G_NAME2[revOv.view] || revOv.view)}</h2>
+    ${tbl(['Period', 'Cash collected', 'MRR (end of period)'], revOv.cash_trend.map((b, i) => `<tr><td>${esc(b.label)}</td><td class="r">${inr(b.total)}</td>
+        <td class="r">${revOv.mrr_trend && revOv.mrr_trend[i] && revOv.mrr_trend[i].mrr !== null ? inr(revOv.mrr_trend[i].mrr) : 'No data'}</td></tr>`)
+        .concat([`<tr><td><b>Total</b></td><td class="r"><b>${inr(revOv.kpi.cash)}</b></td><td></td></tr>`]))}
+    <h2>Revenue by plan</h2>
+    ${revOv.by_plan.length ? tbl(['Plan', 'Active paying', 'MRR', 'Cash (period)', 'Lifetime'], revOv.by_plan.map(x => `<tr><td>${esc(x.plan)}</td><td>${x.active_institutes}</td><td class="r">${inr(x.mrr)}</td><td class="r">${inr(x.cash)}</td><td class="r">${inr(x.lifetime)}</td></tr>`)) : '<p>No plans configured.</p>'}
+    <h2>Payment methods</h2>
+    ${revOv.by_method.length ? tbl(['Method', 'Payments', 'Amount'], revOv.by_method.map(x => `<tr><td>${esc(x.method)}</td><td>${x.count}</td><td class="r">${inr(x.amount)}</td></tr>`)) : '<p>No payments found for the selected period.</p>'}
     <h2>Revenue by institute</h2>
     ${r.by_institute.length ? tbl(['Institute', 'Payments', 'Amount', 'Share'], r.by_institute.map(x => `<tr><td>${esc(x.name)} (${esc(x.code)})</td><td>${x.count}</td><td class="r">${inr(x.total)}</td><td>${Number(r.cash) > 0 ? Math.round(Number(x.total) * 1000 / Number(r.cash)) / 10 : 0}%</td></tr>`)) : '<p>No payments found for the selected period.</p>'}
     <h2>Recharge status</h2>
