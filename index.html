@@ -67,6 +67,8 @@
   .pill.suspended{ background:#e74c3c33; color:#ff8a7d; }
   .pill.expired{ background:#e74c3c33; color:#ff8a7d; }
   .pill.warn{ background:#f39c1233; color:#f5b041; }
+  .pill.grey{ background:#7f8c8d33; color:#aab7b8; } .pill.blue{ background:#3498db33; color:#5dade2; } .pill.neutral{ background:#8e44ad33; color:#c39bd3; }
+  table.report td.num, table.report th.num{ text-align:right; }
   .sub-box{ margin-top:14px; border-top:1px solid var(--line-soft); padding-top:4px; }
   .report-wrap{ overflow-x:auto; margin-top:12px; }
   table.report{ width:100%; border-collapse:collapse; font-size:13px; min-width:680px; }
@@ -347,9 +349,9 @@
           </div>
 
           <div class="stats" style="margin-top:14px; grid-template-columns:repeat(4, 1fr);">
-            <div class="stat"><b id="rev-total">–</b><span>Received in range</span></div>
+            <div class="stat" title="Payments received in the selected range (void excluded) minus refunds made in the range"><b id="rev-total">–</b><span>Cash collected (net)</span><span id="rev-refunds" style="font-size:11px;"></span></div>
             <div class="stat"><b id="rev-count">–</b><span>Payments</span></div>
-            <div class="stat"><b id="rev-mrr">–</b><span>Expected per month</span></div>
+            <div class="stat" title="Monthly value of active, paying subscriptions (special price or plan price ÷ billing months). Not the same as cash."><b id="rev-mrr">–</b><span>Current MRR</span><span id="rev-mrr-note" style="font-size:11px;"></span></div>
             <div class="stat"><b id="rev-due">–</b><span>Expiring / expired</span></div>
           </div>
 
@@ -376,17 +378,18 @@
                 <div><label>Payment date</label><input id="pay-date" type="date"></div>
                 <div><label>Method</label>
                   <select class="sel" id="pay-method" style="width:100%;">
-                    <option>UPI</option><option>Bank transfer</option><option>Cash</option><option>Cheque</option><option>Other</option>
+                    <option>UPI</option><option>Bank transfer</option><option>Cash</option><option>Cheque</option><option>Card</option><option>Payment gateway</option><option>Other</option>
                   </select></div>
               </div>
-              <label>Reference (transaction ID)</label><input id="pay-ref">
-              <label>Note</label><input id="pay-note">
+              <label id="pay-ref-label">Reference</label><input id="pay-ref">
+              <label id="pay-note-label">Note</label><input id="pay-note">
               <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);">
                 <input type="checkbox" id="pay-extend" style="width:auto;" checked> Extend the institute's access by this period</label>
               <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text); margin-top:4px;">
                 <input type="checkbox" id="pay-apply" style="width:auto;" checked> Apply the plan's live-test limit</label>
               <div class="err" id="pay-err"></div>
               <button class="btn btn-primary" id="btn-pay-save" style="margin-top:6px;">Save payment</button>
+              <div id="pay-ok"></div>
             </div>
 
             <div class="card" style="margin-top:10px;">
@@ -425,7 +428,20 @@
           </div>
 
           <label>Payments (selected range)</label>
+          <p class="muted" style="font-size:12px; margin:0;">Payments are never deleted. Use <b>Void</b> for a payment entered by mistake, or <b>Refund</b> when money was returned.</p>
           <div class="report-wrap" id="rev-payments"></div>
+
+          <details style="margin-top:16px;">
+            <summary>🗂 Subscription events</summary>
+            <button class="btn" id="btn-events-load" style="margin-top:10px;">Load events</button>
+            <div class="report-wrap" id="rev-events"></div>
+          </details>
+          <details style="margin-top:10px;">
+            <summary>🧾 Audit log</summary>
+            <p class="muted" style="font-size:12px; margin:8px 0 0;">Every payment, refund, void, plan and subscription change. The log cannot be edited or deleted.</p>
+            <button class="btn" id="btn-audit-load" style="margin-top:10px;">Load audit log</button>
+            <div class="report-wrap" id="rev-audit"></div>
+          </details>
         </div>
       </details>
     </div>
@@ -1300,58 +1316,77 @@ async function loadRevenue(){
   }catch(_e){ toast('Connection error.', 'err'); }
 }
 
+const SUB_STATUS = { active: ['Active', 'active'], expiring_soon: ['Expiring soon', 'warn'], expired: ['Expired', 'expired'],
+                     suspended: ['Suspended', 'grey'], trial: ['Trial', 'blue'], cancelled: ['Cancelled', 'neutral'], churned: ['Churned', 'neutral'] };
+const PAY_STATUS = { paid: ['Paid', 'active'], partially_refunded: ['Partially refunded', 'warn'], refunded: ['Refunded', 'neutral'], void: ['Void', 'grey'] };
+function dmy(d){ if (!d) return '—'; const x = new Date(d); return `${String(x.getDate()).padStart(2,'0')}-${String(x.getMonth()+1).padStart(2,'0')}-${x.getFullYear()}`; }
+function acctBadges(s){
+  return (s.account_type === 'main' ? ' <span class="pill blue">Main institute</span>' : '') +
+         (s.no_end_date && s.account_type !== 'main' ? ' <span class="pill neutral">No end date</span>' : '');
+}
 function renderRevenue(){
   const r = revData;
-  $('rev-total').textContent = inr(r.total);
+  $('rev-total').textContent = inr(r.cash);
   $('rev-count').textContent = r.count;
   $('rev-mrr').textContent = inr(r.mrr);
-  $('rev-due').textContent = r.status.filter(s => s.recharge === 'expiring' || s.recharge === 'expired').length;
+  $('rev-mrr-note').textContent = r.mrr_since ? `MRR tracked since ${dmy(r.mrr_since)}` : '';
+  $('rev-due').textContent = r.status.filter(s => s.status === 'expiring_soon' || s.status === 'expired').length;
+  $('rev-refunds').textContent = Number(r.refunds) > 0 ? `after ${inr(r.refunds)} refunds` : '';
 
-  const maxB = Math.max(1, ...r.buckets.map(b => Number(b.total)));
-  $('rev-buckets').innerHTML = `<table class="report"><thead><tr><th>${esc(G_NAME[r.granularity])} period</th><th>Payments</th><th>Amount</th><th style="width:40%;"></th></tr></thead><tbody>` +
-    r.buckets.map(b => `<tr><td>${esc(b.label)}</td><td>${b.count}</td><td><b>${inr(b.total)}</b></td>
-      <td style="text-align:left;"><div style="height:10px; border-radius:5px; background:var(--accent); width:${Math.round(Number(b.total) * 100 / maxB)}%;"></div></td></tr>`).join('') +
-    `<tr><td><b>Total</b></td><td><b>${r.count}</b></td><td><b>${inr(r.total)}</b></td><td></td></tr></tbody></table>`;
+  const maxB = Math.max(1, ...r.buckets.map(b => Math.abs(Number(b.total))));
+  $('rev-buckets').innerHTML = `<table class="report"><thead><tr><th>${esc(G_NAME[r.granularity])} period</th><th>Payments</th><th class="num">Cash collected</th><th style="width:40%;"></th></tr></thead><tbody>` +
+    r.buckets.map(b => `<tr><td>${esc(b.label)}</td><td>${b.count}</td><td class="num"><b>${inr(b.total)}</b></td>
+      <td style="text-align:left;"><div style="height:10px; border-radius:5px; background:var(--accent); width:${Math.round(Math.max(0, Number(b.total)) * 100 / maxB)}%;"></div></td></tr>`).join('') +
+    `<tr><td><b>Total</b></td><td><b>${r.count}</b></td><td class="num"><b>${inr(r.cash)}</b></td><td></td></tr></tbody></table>`;
 
-  $('rev-inst').innerHTML = r.by_institute.length ? `<table class="report"><thead><tr><th>Institute</th><th>Payments</th><th>Amount</th><th>Share</th></tr></thead><tbody>` +
-    r.by_institute.map(x => `<tr><td>${esc(x.name)} <span class="muted">(${esc(x.code)})</span></td><td>${x.count}</td><td><b>${inr(x.total)}</b></td>
-      <td>${Number(r.total) > 0 ? Math.round(Number(x.total) * 1000 / Number(r.total)) / 10 : 0}%</td></tr>`).join('') + '</tbody></table>'
-    : '<p class="muted">No payments in this range.</p>';
+  $('rev-inst').innerHTML = r.by_institute.length ? `<table class="report"><thead><tr><th>Institute</th><th>Payments</th><th class="num">Cash collected</th><th class="num">Share</th></tr></thead><tbody>` +
+    r.by_institute.map(x => `<tr><td>${esc(x.name)} <span class="muted">(${esc(x.code)})</span></td><td>${x.count}</td><td class="num"><b>${inr(x.total)}</b></td>
+      <td class="num">${Number(r.cash) > 0 ? Math.round(Number(x.total) * 1000 / Number(r.cash)) / 10 : 0}%</td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted">No payments found for the selected period.</p>';
 
-  $('rev-status').innerHTML = `<table class="report"><thead><tr><th>Institute</th><th>Plan</th><th>Price</th><th>Per month</th><th>Paid until</th><th>Status</th><th>Last payment</th><th>Lifetime</th><th></th></tr></thead><tbody>` +
+  $('rev-status').innerHTML = `<table class="report"><thead><tr><th>Institute</th><th>Plan</th><th class="num">Price</th><th class="num">MRR</th><th>Paid until</th><th class="num">Days left</th><th>Status</th><th>Last payment</th><th class="num">Lifetime paid</th><th></th></tr></thead><tbody>` +
     r.status.map(s => {
-      const st = REV_STATUS[s.recharge] || [s.recharge, 'active'];
-      const until = s.paid_until ? `${fmtDate(s.paid_until)}${s.days_left !== null ? ` <span class="muted">(${s.days_left > 0 ? s.days_left + 'd left' : 'ended'})</span>` : ''}` : '—';
-      return `<tr><td>${esc(s.name)} <span class="muted">(${esc(s.code)})</span></td>
+      const st = SUB_STATUS[s.status] || [s.status, 'neutral'];
+      return `<tr><td>${esc(s.name)} <span class="muted">(${esc(s.code)})</span>${acctBadges(s)}</td>
         <td>${esc(s.plan || '—')}${s.period_months ? ` <span class="muted">· ${PERIOD_NAME[s.period_months]}</span>` : ''}</td>
-        <td>${s.price !== null && s.price !== undefined ? inr(s.price) + (s.custom_price !== null && s.custom_price !== undefined ? ' <span class="muted">(special)</span>' : '') : '—'}</td>
-        <td>${s.monthly_equivalent !== null && s.monthly_equivalent !== undefined ? inr(s.monthly_equivalent) : '—'}</td>
-        <td>${until}</td><td><span class="pill ${st[1]}">${esc(st[0])}</span></td>
-        <td>${s.last_paid_on ? fmtDate(s.last_paid_on) + ' · ' + inr(s.last_amount) : '—'}</td><td>${inr(s.lifetime_total)}</td>
+        <td class="num">${s.price !== null && s.price !== undefined ? inr(s.price) + (s.custom_price !== null && s.custom_price !== undefined ? ' <span class="muted">(special)</span>' : '') : '—'}</td>
+        <td class="num">${s.account_type === 'main' ? '—' : (s.paying ? inr(s.mrr) : '<span class="muted">not paying</span>')}</td>
+        <td>${s.no_end_date ? '—' : dmy(s.paid_until)}</td>
+        <td class="num">${s.days_left === null || s.days_left === undefined ? '—' : (s.days_left > 0 ? s.days_left : '<span style="color:#ff8a7d;">' + s.days_left + '</span>')}</td>
+        <td><span class="pill ${st[1]}">${esc(st[0])}</span></td>
+        <td>${s.last_paid_on ? dmy(s.last_paid_on) + ' · ' + inr(s.last_amount) : '—'}</td>
+        <td class="num">${inr(s.lifetime_paid)}</td>
         <td><button class="btn rev-pay" data-code="${esc(s.code)}" style="padding:4px 9px;">➕ Payment</button>
             <button class="btn rev-plan" data-code="${esc(s.code)}" style="padding:4px 9px;">🏷 Plan</button></td></tr>`; }).join('') + '</tbody></table>';
 
-  $('rev-plans').innerHTML = revPlans.length ? `<table class="report"><thead><tr><th>Plan</th><th>Price</th><th>Period</th><th>Per month</th><th>Live tests</th><th>Institutes</th><th>Status</th><th></th></tr></thead><tbody>` +
-    revPlans.map(p => `<tr><td>${esc(p.name)}</td><td><b>${inr(p.price)}</b></td><td>${PERIOD_NAME[p.period_months]}</td>
-      <td>${inr(Number(p.price) / p.period_months)}</td><td>${p.tests_per_cycle ?? 'Unlimited'}</td><td>${p.institutes}</td>
+  $('rev-plans').innerHTML = revPlans.length ? `<table class="report"><thead><tr><th>Plan</th><th class="num">Price</th><th>Period</th><th class="num">Per month</th><th>Live tests</th><th>Institutes</th><th>Status</th><th></th></tr></thead><tbody>` +
+    revPlans.map(p => `<tr><td>${esc(p.name)}</td><td class="num"><b>${inr(p.price)}</b></td><td>${PERIOD_NAME[p.period_months]}</td>
+      <td class="num">${inr(Number(p.price) / p.period_months)}</td><td>${p.tests_per_cycle ?? 'Unlimited'}</td><td>${p.institutes}</td>
       <td>${p.is_active ? 'Active' : 'Inactive'}</td><td><button class="btn plan-edit" data-id="${p.id}" style="padding:4px 9px;">✏️ Edit</button></td></tr>`).join('') + '</tbody></table>'
-    : '<p class="muted">No plans yet. Add your first plan below.</p>';
+    : '<p class="muted">No plans configured. Add your first plan below.</p>';
 
-  $('rev-payments').innerHTML = r.payments.length ? `<table class="report"><thead><tr><th>Date</th><th>Institute</th><th>Amount</th><th>Plan / period</th><th>Access covered</th><th>Method</th><th>Reference</th><th></th></tr></thead><tbody>` +
-    r.payments.map(p => `<tr><td>${fmtDate(p.paid_on)}</td><td>${esc(p.name)}${p.deleted_institute ? ' <span class="muted">(deleted)</span>' : ''}</td><td><b>${inr(p.amount)}</b></td>
-      <td>${esc(p.plan || '—')}${p.months ? ' · ' + p.months + ' mo' : ''}</td>
-      <td>${p.coverage_start ? fmtDate(p.coverage_start) + ' – ' + fmtDate(p.coverage_end) : '—'}</td>
-      <td>${esc(p.method || '—')}</td><td>${esc(p.reference || '—')}</td>
-      <td><button class="btn btn-danger pay-del" data-id="${p.id}" data-name="${esc(p.name)}" data-amount="${p.amount}" style="padding:4px 9px;">🗑</button></td></tr>`).join('') + '</tbody></table>'
-    : '<p class="muted">No payments in this range.</p>';
+  $('rev-payments').innerHTML = r.payments.length ? `<table class="report"><thead><tr><th>ID</th><th>Date</th><th>Institute</th><th class="num">Amount</th><th>Plan / period</th><th>Access covered</th><th>Method</th><th>Reference</th><th>Status</th><th></th></tr></thead><tbody>` +
+    r.payments.map(p => {
+      const st = PAY_STATUS[p.status] || [p.status, 'neutral'];
+      const extra = p.status === 'void' ? `<div class="muted" style="font-size:11px;">${esc(p.void_reason || '')}</div>`
+                  : Number(p.refund_amount) > 0 ? `<div class="muted" style="font-size:11px;">Refunded ${inr(p.refund_amount)} on ${dmy(p.refund_date)}</div>` : '';
+      const canRefund = p.status === 'paid' || p.status === 'partially_refunded';
+      return `<tr style="${p.status === 'void' ? 'opacity:.6;' : ''}"><td>#${p.id}</td><td>${dmy(p.paid_on)}</td><td>${esc(p.name)}${p.deleted_institute ? ' <span class="muted">(deleted)</span>' : ''}</td>
+        <td class="num"><b>${inr(p.amount)}</b></td><td>${esc(p.plan || '—')}${p.months ? ' · ' + p.months + ' mo' : ''}</td>
+        <td>${p.coverage_start ? dmy(p.coverage_start) + ' – ' + dmy(p.coverage_end) : '—'}</td>
+        <td>${esc(p.method || '—')}</td><td>${esc(p.reference || '—')}</td>
+        <td><span class="pill ${st[1]}">${esc(st[0])}</span>${extra}</td>
+        <td>${p.status === 'paid' ? `<button class="btn pay-void" data-id="${p.id}" style="padding:4px 9px;">Void</button>` : ''}
+            ${canRefund ? `<button class="btn pay-refund" data-id="${p.id}" style="padding:4px 9px;">Refund</button>` : ''}</td></tr>`; }).join('') + '</tbody></table>'
+    : '<p class="muted">No payments found for the selected period.</p>';
 
   const instOpts = r.status.map(s => `<option value="${esc(s.code)}">${esc(s.name)} (${esc(s.code)})</option>`).join('');
   const keep = [$('pay-inst').value, $('ip-inst').value];
   $('pay-inst').innerHTML = instOpts; $('ip-inst').innerHTML = instOpts;
   if (keep[0]) $('pay-inst').value = keep[0];
   if (keep[1]) $('ip-inst').value = keep[1];
-  $('ip-plan').innerHTML = '<option value="">— No plan —</option>' + revPlans.map(p => `<option value="${p.id}">${esc(p.name)} · ${inr(p.price)} ${PERIOD_NAME[p.period_months].toLowerCase()}${p.is_active ? '' : ' (inactive)'}</option>`).join('');
-  prefillPayment(); prefillInstPlan();
+  $('ip-plan').innerHTML = '<option value="">— No plan —</option>' + revPlans.filter(p => p.is_active).map(p => `<option value="${p.id}">${esc(p.name)} · ${inr(p.price)} ${PERIOD_NAME[p.period_months].toLowerCase()}</option>`).join('');
+  prefillPayment(); prefillInstPlan(); updateRefHint();
 }
 
 function statusOf(code){ return revData ? revData.status.find(s => s.code === code) : null; }
@@ -1376,38 +1411,144 @@ $('rev-status').addEventListener('click', (e) => {
   if (pl){ $('ip-inst').value = pl.dataset.code; prefillInstPlan(); $('ip-inst').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 });
 
+/* ---- Payment: validation → confirmation summary → save (duplicate-safe) ---- */
+const REF_RULE = { 'UPI': 'UPI transaction ID (required)', 'Bank transfer': 'UTR / bank reference (required)',
+                   'Cheque': 'Cheque number (required)', 'Card': 'Card transaction reference (required)',
+                   'Payment gateway': 'Gateway transaction ID (required)', 'Cash': 'Receipt / reference (optional)', 'Other': 'Reference (optional)' };
+function updateRefHint(){ $('pay-ref-label').textContent = REF_RULE[$('pay-method').value] || 'Reference'; $('pay-note-label').textContent = $('pay-method').value === 'Other' ? 'Note (required: describe the method)' : 'Note'; }
+$('pay-method').addEventListener('change', updateRefHint);
+function newPayKey(){ return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'k' + Date.now() + Math.random().toString(36).slice(2); }
+let payKey = newPayKey(), paySaving = false;
+function addMonthsMinusDay(dateStr, months){
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const t = new Date(Date.UTC(y, m - 1 + months, 1));
+  const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+  const r = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), Math.min(d, last)));
+  r.setUTCDate(r.getUTCDate() - 1);
+  return r.toISOString().slice(0, 10);
+}
+function estimateAccessUntil(s, payDate, months){
+  if (!s || s.account_type === 'main') return null;
+  let start = payDate;
+  if (s.paid_until){
+    const cur = new Date(new Date(s.paid_until).getTime() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);   // IST date
+    if (cur >= payDate){ const n = new Date(cur + 'T00:00:00Z'); n.setUTCDate(n.getUTCDate() + 1); start = n.toISOString().slice(0, 10); }
+  }
+  return addMonthsMinusDay(start, months);
+}
+function confirmDialog(html){
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed; inset:0; background:rgba(5,15,25,.75); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;';
+    ov.innerHTML = `<div class="card" style="max-width:460px; width:100%; margin:0;">${html}
+      <div class="btn-row" style="justify-content:flex-end;"><button class="btn" data-a="no">Cancel</button><button class="btn btn-primary" data-a="yes">Confirm &amp; save payment</button></div></div>`;
+    ov.addEventListener('click', e => { const a = e.target.closest('[data-a]'); if (!a) return; ov.remove(); resolve(a.dataset.a === 'yes'); });
+    document.body.appendChild(ov);
+  });
+}
 $('btn-pay-save').addEventListener('click', async () => {
-  const errEl = $('pay-err'); errEl.textContent = ''; revTouch();
+  if (paySaving) return;
+  const errEl = $('pay-err'); errEl.textContent = ''; $('pay-ok').innerHTML = ''; revTouch();
   const code = $('pay-inst').value, amount = $('pay-amount').value, date = $('pay-date').value;
+  const method = $('pay-method').value, ref = $('pay-ref').value.trim(), note = $('pay-note').value.trim();
+  const months = Number($('pay-months').value);
   if (!code){ errEl.textContent = 'Please choose an institute.'; return; }
-  if (amount === '' || Number(amount) < 0){ errEl.textContent = 'Please enter the amount received.'; return; }
+  if (amount === '' || !(Number(amount) > 0)){ errEl.textContent = 'Invalid payment amount.'; return; }
   if (!date){ errEl.textContent = 'Please enter the payment date.'; return; }
+  if (/required/.test(REF_RULE[method] || '') && !ref){ errEl.textContent = `${REF_RULE[method].replace(' (required)', '')} is required.`; return; }
+  if (method === 'Other' && !note){ errEl.textContent = 'Please add a note describing the payment method.'; return; }
   const s = statusOf(code);
-  if (!confirm(`Record ${inr(amount)} from ${s ? s.name : code} (${$('pay-months').selectedOptions[0].text})?${$('pay-extend').checked && code !== 'VIDYAPATH' ? '\n\nThe institute\'s access will be extended accordingly.' : ''}`)) return;
-  const b = $('btn-pay-save'); b.disabled = true;
+  const extend = $('pay-extend').checked && s && s.account_type !== 'main';
+  const until = extend ? estimateAccessUntil(s, date, months) : null;
+  const row = (k, v) => `<tr><td class="muted" style="padding:4px 10px 4px 0;">${k}</td><td style="padding:4px 0;"><b>${v}</b></td></tr>`;
+  const ok = await confirmDialog(`<b style="font-size:16px;">You are recording</b>
+    <table style="margin-top:10px; font-size:14px;">
+      ${row('Institute', esc(s ? s.name + ' (' + s.code + ')' : code))}
+      ${row('Plan', esc((s && s.plan) || '—'))}
+      ${row('Amount', inr(amount))}
+      ${row('Billing period', esc($('pay-months').selectedOptions[0].text))}
+      ${row('Payment date', dmy(date))}
+      ${row('Method', esc(method) + (ref ? ' · ' + esc(ref) : ''))}
+      ${row('Access until', extend ? dmy(until) : (s && s.account_type === 'main' ? 'Not changed (main institute)' : 'Not changed'))}
+    </table>`);
+  if (!ok) return;
+  paySaving = true;
+  const b = $('btn-pay-save'); b.disabled = true; b.textContent = 'Saving...';
   try{
     const r = await rpc('sa_web_payment_add', { ...revCreds(), p_code: code, p_amount: Number(amount), p_paid_on: date,
-      p_period_months: Number($('pay-months').value), p_method: $('pay-method').value, p_reference: $('pay-ref').value.trim(),
-      p_note: $('pay-note').value.trim(), p_extend_access: $('pay-extend').checked, p_apply_plan_limits: $('pay-apply').checked });
+      p_period_months: months, p_method: method, p_reference: ref, p_note: note,
+      p_extend_access: $('pay-extend').checked, p_apply_plan_limits: $('pay-apply').checked, p_client_key: payKey });
     if (revAuthFail(r)) return;
     if (r && r.ok){
-      toast(r.access_until ? `Payment saved. Access extended until ${fmtDate(r.access_until)}.` : 'Payment saved.', 'ok');
+      $('pay-ok').innerHTML = `<div class="card" style="margin:10px 0 0; border-color:var(--accent);"><b>✅ Payment recorded successfully.</b>
+        <div class="muted" style="margin-top:6px; font-size:13px;">Payment ID #${r.id} · ${esc(r.institute)} · ${inr(r.amount)} · ${esc(r.plan || '—')}${r.access_until ? ' · new paid until ' + dmy(r.access_until) : ''}${r.duplicate ? ' · (already saved earlier)' : ''}</div></div>`;
+      payKey = newPayKey();
       $('pay-ref').value = ''; $('pay-note').value = '';
       await loadRevenue(); loadList();
-    } else errEl.textContent = (r && r.error) || 'Unable to save the payment.';
-  }catch(_e){ errEl.textContent = 'Connection error.'; }
-  finally{ b.disabled = false; }
+    } else errEl.textContent = (r && r.error) || 'Payment could not be saved.';
+  }catch(_e){ errEl.textContent = 'Connection error. Payment could not be saved; you can safely try again.'; }
+  finally{ paySaving = false; b.disabled = false; b.textContent = 'Save payment'; }
 });
 
+/* ---- Void / Refund (payments are never deleted) ---- */
 $('rev-payments').addEventListener('click', async (e) => {
-  const b = e.target.closest('.pay-del'); if (!b) return; revTouch();
-  if (!confirm(`Delete the payment of ${inr(b.dataset.amount)} from ${b.dataset.name}?\n\nThis removes the record only; the institute's access end date is not changed.`)) return;
-  try{
-    const r = await rpc('sa_web_payment_delete', { ...revCreds(), p_id: Number(b.dataset.id) });
+  const vb = e.target.closest('.pay-void'), rb = e.target.closest('.pay-refund');
+  if (!vb && !rb) return; revTouch();
+  const p = revData.payments.find(x => String(x.id) === (vb || rb).dataset.id); if (!p) return;
+  if (vb){
+    const reason = prompt(`VOID payment #${p.id} — ${inr(p.amount)} from ${p.name}.\n\nUse this only for a payment entered by mistake. The record is kept and excluded from revenue.\n\nReason:`);
+    if (reason === null) return;
+    if (reason.trim().length < 3){ toast('Please give a reason (at least 3 characters).', 'err'); return; }
+    let revert = false;
+    if (p.coverage_end) revert = confirm(`This payment extended access until ${dmy(p.coverage_end)}.\n\nAlso move the institute's access back to ${dmy(new Date(new Date(p.coverage_start).getTime() - 86400000))}?\n\nOK = move access back (only possible if this was the latest recharge)\nCancel = keep the current access`);
+    const r = await rpc('sa_web_payment_void', { ...revCreds(), p_id: p.id, p_reason: reason.trim(), p_revert_access: revert });
     if (revAuthFail(r)) return;
-    if (r && r.ok){ toast('Payment deleted.', 'ok'); loadRevenue(); }
-    else toast((r && r.error) || 'Unable to delete.', 'err');
-  }catch(_e){ toast('Connection error.', 'err'); }
+    if (r && r.ok){ toast(r.access_reverted ? 'Payment voided and access moved back.' : 'Payment voided.', 'ok'); loadRevenue(); loadList(); }
+    else toast((r && r.error) || 'Unable to void the payment.', 'err');
+  } else {
+    const remaining = Number(p.amount) - Number(p.refund_amount || 0);
+    const amt = prompt(`REFUND for payment #${p.id} — ${inr(p.amount)} from ${p.name}.\nRefundable: ${inr(remaining)}\n\nRefund amount (₹):`, String(remaining));
+    if (amt === null) return;
+    if (!(Number(amt) > 0)){ toast('Invalid refund amount.', 'err'); return; }
+    const reason = prompt('Reason for the refund:');
+    if (reason === null) return;
+    if (reason.trim().length < 3){ toast('Please give a reason (at least 3 characters).', 'err'); return; }
+    if (!confirm(`Refund ${inr(amt)} to ${p.name} today (${dmy(isoToday())})?\n\nThe institute's access is not changed.`)) return;
+    const r = await rpc('sa_web_payment_refund', { ...revCreds(), p_id: p.id, p_amount: Number(amt), p_refund_date: isoToday(), p_reason: reason.trim() });
+    if (revAuthFail(r)) return;
+    if (r && r.ok){ toast(r.status === 'refunded' ? 'Payment fully refunded.' : 'Partial refund recorded.', 'ok'); loadRevenue(); }
+    else toast((r && r.error) || 'Unable to record the refund.', 'err');
+  }
+});
+
+/* ---- Audit log + subscription events (read-only) ---- */
+const AUDIT_NAME = { payment_created: 'Payment recorded', payment_voided: 'Payment voided', payment_refunded: 'Payment refunded',
+  plan_changed: 'Institute plan changed', plan_created: 'Plan created', plan_price_changed: 'Plan price changed', plan_updated: 'Plan updated',
+  plan_activated: 'Plan activated', plan_deactivated: 'Plan deactivated', subscription_suspended: 'Subscription suspended',
+  subscription_reactivated: 'Subscription reactivated', access_end_date_changed: 'Access end date changed', institute_deleted: 'Institute deleted' };
+$('btn-audit-load').addEventListener('click', async () => {
+  revTouch(); $('rev-audit').innerHTML = '<p class="muted">Loading...</p>';
+  const r = await rpc('sa_web_audit_log', { ...revCreds(), p_limit: 200 });
+  if (revAuthFail(r)) return;
+  if (!r || !r.ok){ $('rev-audit').innerHTML = '<p class="muted">Unable to load.</p>'; return; }
+  const fmt = o => o ? esc(Object.entries(o).map(([k, v]) => `${k}: ${v === null ? '—' : v}`).join(', ')) : '—';
+  $('rev-audit').innerHTML = r.rows.length ? `<table class="report"><thead><tr><th>When</th><th>By</th><th>Action</th><th>Item</th><th>Before</th><th>After</th></tr></thead><tbody>` +
+    r.rows.map(a => `<tr><td>${esc(new Date(a.at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }))}</td><td>${esc(a.actor)}</td>
+      <td>${esc(AUDIT_NAME[a.action] || a.action)}</td><td>${esc(a.entity)} ${esc(a.entity_id || '')}</td>
+      <td style="white-space:normal; max-width:220px; text-align:left;">${fmt(a.old)}</td><td style="white-space:normal; max-width:260px; text-align:left;">${fmt(a.new)}</td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted">No audit entries yet.</p>';
+});
+$('btn-events-load').addEventListener('click', async () => {
+  revTouch(); $('rev-events').innerHTML = '<p class="muted">Loading...</p>';
+  const r = await rpc('sa_web_sub_events', { ...revCreds(), p_limit: 200 });
+  if (revAuthFail(r)) return;
+  if (!r || !r.ok){ $('rev-events').innerHTML = '<p class="muted">Unable to load.</p>'; return; }
+  $('rev-events').innerHTML = r.rows.length ? `<table class="report"><thead><tr><th>Date</th><th>Institute</th><th>Event</th><th>Plan</th><th class="num">MRR before</th><th class="num">MRR after</th><th>Note</th></tr></thead><tbody>` +
+    r.rows.map(x => `<tr><td>${dmy(x.date)}</td><td>${esc(x.name || x.code)}</td><td><b>${esc(x.type)}</b></td>
+      <td>${esc(x.old_plan || '—')}${x.new_plan && x.new_plan !== x.old_plan ? ' → ' + esc(x.new_plan) : ''}</td>
+      <td class="num">${x.old_mrr === null ? '—' : inr(x.old_mrr)}</td><td class="num">${x.new_mrr === null ? '—' : inr(x.new_mrr)}</td>
+      <td style="white-space:normal; text-align:left;">${esc(x.note || '')}</td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted">No subscription events yet.</p>';
 });
 
 $('btn-ip-save').addEventListener('click', async () => {
@@ -1465,24 +1606,27 @@ $('btn-rev-pdf').addEventListener('click', () => {
       td { padding: 5px 6px; border-bottom: 1px solid #e3e7ee; } tr:nth-child(even) td { background: #f6f8fb; } tr { page-break-inside: avoid; }
       .r { text-align: right; } .foot { margin-top: 16px; font-size: 10px; color: #888; }
     </style></head><body>
-    <h1>Vidyapath CBT Platform — Revenue Report</h1>
-    <div class="sub">${esc(G_NAME[r.granularity])} view · ${fmtDate(r.from)} to ${fmtDate(r.to)} · generated ${esc(gen)} · Confidential</div>
-    <div class="sum"><div>Received in range<b>${inr(r.total)}</b></div><div>Payments<b>${r.count}</b></div>
-      <div>Expected per month<b>${inr(r.mrr)}</b></div><div>Expiring / expired<b>${r.status.filter(s => s.recharge === 'expiring' || s.recharge === 'expired').length}</b></div></div>
+    <h1>Vidyapath CBT — Revenue &amp; Subscriptions Report</h1>
+    <div class="sub">${esc(G_NAME[r.granularity])} view · ${dmy(r.from)} to ${dmy(r.to)} · generated ${esc(gen)} · Confidential</div>
+    <div class="sum"><div>Cash collected (net)<b>${inr(r.cash)}</b></div><div>Payments<b>${r.count}</b></div>
+      <div>Current MRR<b>${inr(r.mrr)}</b></div><div>Expiring / expired<b>${r.status.filter(s => s.status === 'expiring_soon' || s.status === 'expired').length}</b></div></div>
+    <div class="sub">Cash collected excludes void payments; refunds are subtracted on their refund date. MRR is the monthly value of active paying subscriptions${r.mrr_since ? ', tracked since ' + dmy(r.mrr_since) : ''}.</div>
     <h2>Revenue by period</h2>
-    ${tbl(['Period', 'Payments', 'Amount'], r.buckets.map(b => `<tr><td>${esc(b.label)}</td><td>${b.count}</td><td class="r">${inr(b.total)}</td></tr>`)
-        .concat([`<tr><td><b>Total</b></td><td><b>${r.count}</b></td><td class="r"><b>${inr(r.total)}</b></td></tr>`]))}
+    ${tbl(['Period', 'Payments', 'Cash collected'], r.buckets.map(b => `<tr><td>${esc(b.label)}</td><td>${b.count}</td><td class="r">${inr(b.total)}</td></tr>`)
+        .concat([`<tr><td><b>Total</b></td><td><b>${r.count}</b></td><td class="r"><b>${inr(r.cash)}</b></td></tr>`]))}
     <h2>Revenue by institute</h2>
-    ${r.by_institute.length ? tbl(['Institute', 'Payments', 'Amount', 'Share'], r.by_institute.map(x => `<tr><td>${esc(x.name)} (${esc(x.code)})</td><td>${x.count}</td><td class="r">${inr(x.total)}</td><td>${Number(r.total) > 0 ? Math.round(Number(x.total) * 1000 / Number(r.total)) / 10 : 0}%</td></tr>`)) : '<p>No payments in this range.</p>'}
+    ${r.by_institute.length ? tbl(['Institute', 'Payments', 'Amount', 'Share'], r.by_institute.map(x => `<tr><td>${esc(x.name)} (${esc(x.code)})</td><td>${x.count}</td><td class="r">${inr(x.total)}</td><td>${Number(r.cash) > 0 ? Math.round(Number(x.total) * 1000 / Number(r.cash)) / 10 : 0}%</td></tr>`)) : '<p>No payments found for the selected period.</p>'}
     <h2>Recharge status</h2>
-    ${tbl(['Institute', 'Plan', 'Price', 'Paid until', 'Status', 'Last payment', 'Lifetime'], r.status.map(s => `<tr><td>${esc(s.name)} (${esc(s.code)})</td>
+    ${tbl(['Institute', 'Plan', 'Price', 'MRR', 'Paid until', 'Status', 'Last payment', 'Lifetime paid'], r.status.map(s => `<tr><td>${esc(s.name)} (${esc(s.code)})${s.account_type === 'main' ? ' · Main institute' : ''}${s.no_end_date && s.account_type !== 'main' ? ' · No end date' : ''}</td>
         <td>${esc(s.plan || '—')}${s.period_months ? ' · ' + PERIOD_NAME[s.period_months] : ''}</td><td class="r">${s.price !== null && s.price !== undefined ? inr(s.price) : '—'}</td>
-        <td>${s.paid_until ? fmtDate(s.paid_until) : '—'}</td><td>${esc((REV_STATUS[s.recharge] || [s.recharge])[0])}</td>
-        <td>${s.last_paid_on ? fmtDate(s.last_paid_on) + ' · ' + inr(s.last_amount) : '—'}</td><td class="r">${inr(s.lifetime_total)}</td></tr>`))}
+        <td class="r">${s.account_type === 'main' || !s.paying ? '—' : inr(s.mrr)}</td>
+        <td>${s.no_end_date ? '—' : dmy(s.paid_until)}</td><td>${esc((SUB_STATUS[s.status] || [s.status])[0])}</td>
+        <td>${s.last_paid_on ? dmy(s.last_paid_on) + ' · ' + inr(s.last_amount) : '—'}</td><td class="r">${inr(s.lifetime_paid)}</td></tr>`))}
     <h2>Payments</h2>
-    ${r.payments.length ? tbl(['Date', 'Institute', 'Amount', 'Plan / period', 'Access covered', 'Method', 'Reference'], r.payments.map(p => `<tr><td>${fmtDate(p.paid_on)}</td><td>${esc(p.name)}</td>
+    ${r.payments.length ? tbl(['ID', 'Date', 'Institute', 'Amount', 'Plan / period', 'Access covered', 'Method', 'Reference', 'Status'], r.payments.map(p => `<tr><td>#${p.id}</td><td>${dmy(p.paid_on)}</td><td>${esc(p.name)}</td>
         <td class="r">${inr(p.amount)}</td><td>${esc(p.plan || '—')}${p.months ? ' · ' + p.months + ' mo' : ''}</td>
-        <td>${p.coverage_start ? fmtDate(p.coverage_start) + ' – ' + fmtDate(p.coverage_end) : '—'}</td><td>${esc(p.method || '—')}</td><td>${esc(p.reference || '—')}</td></tr>`)) : '<p>No payments in this range.</p>'}
+        <td>${p.coverage_start ? dmy(p.coverage_start) + ' – ' + dmy(p.coverage_end) : '—'}</td><td>${esc(p.method || '—')}</td><td>${esc(p.reference || '—')}</td>
+        <td>${esc((PAY_STATUS[p.status] || [p.status])[0])}${Number(p.refund_amount) > 0 ? ' (' + inr(p.refund_amount) + ' refunded)' : ''}</td></tr>`)) : '<p>No payments found for the selected period.</p>'}
     <div class="foot">Amounts in Indian Rupees. This report is generated from payments recorded in the platform and is not a tax invoice.</div>
     </body></html>`;
   const frame = document.createElement('iframe');
