@@ -86,7 +86,12 @@
   .chart .bar.mrr{ background:#5dade2; } .chart .bar.none{ background:transparent; border:1px dashed var(--line-soft); height:30px; }
   .chart .v{ font-size:10.5px; color:var(--text-dim); margin-bottom:3px; white-space:nowrap; }
   .chart .l{ font-size:10.5px; color:var(--text-dim); margin-top:4px; white-space:nowrap; }
-  @media (max-width:720px){ .kpis{ grid-template-columns:1fr 1fr; } }
+  .ren-buckets{ display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; margin:12px 0; }
+  .ren-chip{ background:var(--field); border:1px solid var(--line-soft); border-radius:12px; padding:10px; color:var(--text); font:inherit; cursor:pointer; text-align:left; }
+  .ren-chip span{ display:block; font-size:12px; color:var(--text-dim); } .ren-chip b{ display:block; font-size:20px; margin:2px 0; }
+  .ren-chip small{ font-size:11.5px; color:var(--text-dim); }
+  .ren-chip.on{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; } .ren-chip.bad b{ color:#ff8a7d; }
+  @media (max-width:720px){ .kpis{ grid-template-columns:1fr 1fr; } .ren-buckets{ grid-template-columns:repeat(3, 1fr); } }
   .sub-box{ margin-top:14px; border-top:1px solid var(--line-soft); padding-top:4px; }
   .report-wrap{ overflow-x:auto; margin-top:12px; }
   table.report{ width:100%; border-collapse:collapse; font-size:13px; min-width:680px; }
@@ -382,6 +387,7 @@
           <div class="rev-tabs">
             <button class="rev-tab on" data-tab="ov">Overview</button>
             <button class="rev-tab" data-tab="subs">Subscriptions</button>
+            <button class="rev-tab" data-tab="ren">Renewals</button>
             <button class="rev-tab" data-tab="pays">Payments</button>
             <button class="rev-tab" data-tab="plans">Plans &amp; pricing</button>
             <button class="rev-tab" data-tab="audit">Audit log</button>
@@ -434,6 +440,41 @@
               <button class="btn btn-primary" id="btn-ip-save" style="margin-top:6px;">Save</button>
             </div>
           </div>
+          </div>
+
+          <div class="rev-pane hidden" data-pane="ren">
+            <div class="ren-buckets" id="ren-buckets"></div>
+            <div class="report-wrap" id="ren-table"><p class="muted">Loading...</p></div>
+
+            <div class="grid" style="margin-top:8px;">
+              <div class="card" style="margin-top:10px;">
+                <b>🔔 Reminder settings</b>
+                <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);">
+                  <input type="checkbox" id="rs-enabled" style="width:auto;"> Send renewal reminders</label>
+                <label>Days before expiry (0 = on the expiry day)</label><input id="rs-before" placeholder="7, 3, 1, 0">
+                <label>Days after expiry</label><input id="rs-after" placeholder="3, 7">
+                <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);">
+                  <input type="checkbox" id="rs-email" style="width:auto;"> Email the institute's contact email</label>
+                <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text); margin-top:4px;">
+                  <input type="checkbox" id="rs-dash" style="width:auto;"> Show in the institute's admin dashboard</label>
+                <div class="err" id="rs-err"></div>
+                <button class="btn btn-primary" id="btn-rs-save" style="margin-top:6px;">Save settings</button>
+                <p class="muted" style="font-size:12px; margin:8px 0 0;">Only paying institutes receive reminders; suspended and cancelled institutes are skipped. Each reminder is sent once per expiry date. Access rules are not changed.</p>
+              </div>
+              <div class="card" style="margin-top:10px;">
+                <b>📨 Send reminders</b>
+                <p class="muted" style="font-size:13px; margin:8px 0;">Due reminders are sent automatically when you open Revenue, and every morning if the daily schedule is set up. You can also send them now.</p>
+                <button class="btn btn-primary" id="btn-rem-run">Send due reminders now</button>
+                <div id="rem-result" style="margin-top:10px;"></div>
+                <p class="muted" id="rem-last" style="font-size:12px; margin:8px 0 0;"></p>
+              </div>
+            </div>
+
+            <details style="margin-top:14px;">
+              <summary>🗒 Reminder log</summary>
+              <button class="btn" id="btn-rem-log" style="margin-top:10px;">Load reminder log</button>
+              <div class="report-wrap" id="rem-log"></div>
+            </details>
           </div>
 
           <div class="rev-pane hidden" data-pane="pays">
@@ -1284,6 +1325,7 @@ async function revOpenWith(pin, plans){
   revPlans = plans || [];
   revTouch();
   await loadRevenue();
+  autoRunReminders();
 }
 $('btn-rev-unlock').addEventListener('click', async () => {
   const pin = $('rev-pin').value.trim(); $('rev-lock-err').textContent = '';
@@ -1776,6 +1818,122 @@ $('rev-renewals').addEventListener('click', (e) => {
   const b = e.target.closest('.ren-pay'); if (!b) return;
   showRevTab('pays'); $('pay-inst').value = b.dataset.code; prefillPayment();
   $('pay-inst').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('pay-amount').focus();
+});
+
+/* ---------------- RENEWALS + REMINDERS (R3) ---------------- */
+let renData = null, renFilter = 'all', remAutoDone = '';
+const REN_BUCKETS = [
+  ['all', 'All', () => true], ['overdue', 'Overdue', d => d < 0], ['today', 'Due today', d => d === 0],
+  ['d1_3', '1–3 days', d => d >= 1 && d <= 3], ['d4_7', '4–7 days', d => d >= 4 && d <= 7], ['d8_30', '8–30 days', d => d >= 8 && d <= 30]];
+function stageName(st){
+  const [k, n] = String(st).split('_');
+  if (k === 'before') return n === '0' ? 'expiry day' : `${n}d before`;
+  return `${n}d after`;
+}
+function remEndpoint(){ return `${SUPABASE_URL}/functions/v1/renewal-reminders`; }
+async function runReminders(silent){
+  const res = await fetch(remEndpoint(), { method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+    body: JSON.stringify({ username: sa.u, password: sa.p, pin: revPin }) });
+  const r = await res.json();
+  if (!silent && r && PIN_MSG[r.error]) { revAuthFail(r); return null; }
+  return r;
+}
+async function loadRenewals(){
+  if (!revPin) return; revTouch();
+  $('ren-table').innerHTML = '<p class="muted">Loading...</p>';
+  try{
+    const r = await rpc('sa_web_renewals', { ...revCreds(), p_ahead: 30 });
+    if (revAuthFail(r)) return;
+    if (!r || !r.ok){ $('ren-table').innerHTML = '<p class="muted">Unable to load renewals.</p>'; return; }
+    renData = r;
+    const cfg = r.settings || {};
+    $('rs-enabled').checked = cfg.enabled !== false;
+    $('rs-before').value = (cfg.before || []).join(', ');
+    $('rs-after').value = (cfg.after || []).join(', ');
+    $('rs-email').checked = cfg.email !== false;
+    $('rs-dash').checked = cfg.dashboard !== false;
+    $('rem-last').textContent = r.last_run ? `Last reminder run: ${new Date(r.last_run).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}` : 'Reminders have not run yet.';
+    renderRenewals();
+  }catch(_e){ $('ren-table').innerHTML = '<p class="muted">Connection error.</p>'; }
+}
+function renderRenewals(){
+  const rows = renData ? renData.rows : [];
+  $('ren-buckets').innerHTML = REN_BUCKETS.map(([k, label, fn]) => {
+    const list = rows.filter(x => fn(x.days_left));
+    const amt = list.reduce((a, x) => a + Number(x.amount || 0), 0);
+    return `<button class="ren-chip ${renFilter === k ? 'on' : ''} ${k === 'overdue' && list.length ? 'bad' : ''}" data-k="${k}">
+      <span>${label}</span><b>${list.length}</b><small>${list.length ? inr(amt) : '—'}</small></button>`; }).join('');
+  const fn = (REN_BUCKETS.find(b => b[0] === renFilter) || REN_BUCKETS[0])[2];
+  const list = rows.filter(x => fn(x.days_left));
+  $('ren-table').innerHTML = list.length ? `<table class="report"><thead><tr><th>Institute</th><th>Plan</th><th class="num">Amount due</th><th>Due date</th><th class="num">Days</th><th>Reminders sent</th><th>Last payment</th><th>Contact</th><th></th></tr></thead><tbody>` +
+    list.map(r => { const wa = waLink(r); const over = r.days_left < 0;
+      const rem = (r.reminders || []).map(x => `<span class="pill ${x.email === 'failed' ? 'expired' : 'neutral'}" title="Email: ${esc(x.email)}">${esc(stageName(x.stage))}${x.email === 'sent' ? ' ✉' : ''}</span>`).join(' ') || '<span class="muted">none yet</span>';
+      return `<tr><td>${esc(r.name)}</td><td>${esc(r.plan || '—')}</td><td class="num"><b>${r.amount !== null && r.amount !== undefined ? inr(r.amount) : '—'}</b></td>
+        <td>${dmy(r.paid_until)}</td><td class="num" style="color:${over ? '#ff8a7d' : (r.days_left <= 7 ? '#f5b041' : 'inherit')};">${over ? Math.abs(r.days_left) + ' overdue' : (r.days_left === 0 ? 'today' : r.days_left + ' left')}</td>
+        <td style="white-space:normal; text-align:left;">${rem}</td><td>${r.last_paid_on ? dmy(r.last_paid_on) : '—'}</td>
+        <td>${esc(r.phone || '—')}${r.email ? `<div class="muted" style="font-size:11px;">${esc(r.email)}</div>` : '<div class="muted" style="font-size:11px;">no email</div>'}</td>
+        <td>${r.phone ? `<a class="btn" style="padding:4px 9px; text-decoration:none;" href="tel:${esc(String(r.phone).replace(/[^0-9+]/g, ''))}">📞 Call</a>` : ''}
+            ${wa ? `<a class="btn" style="padding:4px 9px; text-decoration:none;" target="_blank" rel="noopener" href="${esc(wa)}">💬 WhatsApp</a>` : ''}
+            <button class="btn ren-pay" data-code="${esc(r.code)}" style="padding:4px 9px;">➕ Record payment</button></td></tr>`; }).join('') + '</tbody></table>'
+    : `<p class="muted">${renFilter === 'all' ? 'No renewals due in the next 30 days and nothing overdue.' : 'No institutes in this group.'}</p>`;
+}
+$('ren-buckets').addEventListener('click', e => { const b = e.target.closest('.ren-chip'); if (!b) return; renFilter = b.dataset.k; renderRenewals(); });
+$('ren-table').addEventListener('click', e => {
+  const b = e.target.closest('.ren-pay'); if (!b) return;
+  showRevTab('pays'); $('pay-inst').value = b.dataset.code; prefillPayment();
+  $('pay-inst').scrollIntoView({ behavior: 'smooth', block: 'center' }); $('pay-amount').focus();
+});
+document.querySelector('.rev-tab[data-tab="ren"]').addEventListener('click', loadRenewals);
+
+$('btn-rs-save').addEventListener('click', async () => {
+  const errEl = $('rs-err'); errEl.textContent = ''; revTouch();
+  const parse = v => v.split(/[\s,]+/).filter(Boolean);
+  const before = parse($('rs-before').value), after = parse($('rs-after').value);
+  if (before.some(x => !/^\d+$/.test(x) || Number(x) > 60) || after.some(x => !/^\d+$/.test(x) || Number(x) < 1 || Number(x) > 60)){
+    errEl.textContent = 'Use whole numbers: 0–60 days before, 1–60 days after, separated by commas.'; return;
+  }
+  const r = await rpc('sa_web_reminder_settings', { ...revCreds(), p_settings: {
+    enabled: $('rs-enabled').checked, before: before.map(Number), after: after.map(Number),
+    email: $('rs-email').checked, dashboard: $('rs-dash').checked } });
+  if (revAuthFail(r)) return;
+  if (r && r.ok){ toast('Reminder settings saved.', 'ok'); loadRenewals(); }
+  else errEl.textContent = (r && r.error) || 'Unable to save settings.';
+});
+
+$('btn-rem-run').addEventListener('click', async () => {
+  const b = $('btn-rem-run'); b.disabled = true; b.textContent = 'Sending...'; revTouch();
+  $('rem-result').innerHTML = '';
+  try{
+    const r = await runReminders(false);
+    if (!r) return;
+    if (!r.ok){ $('rem-result').innerHTML = `<p class="err">${esc(r.error === 'server_error' ? 'Reminders could not be sent. Please try again.' : (r.error || 'Unable to send reminders.'))}</p>`; return; }
+    $('rem-result').innerHTML = r.disabled ? '<p class="muted">Reminders are turned off in the settings.</p>'
+      : `<p class="muted" style="color:var(--text);">${r.posted} dashboard message(s) posted · ${r.sent} email(s) sent${r.failed ? ` · <span style="color:#ff8a7d;">${r.failed} failed</span>` : ''}${!r.posted && !r.sent ? ' · nothing was due' : ''}.</p>`;
+    remAutoDone = isoToday();
+    loadRenewals();
+  }catch(_e){ $('rem-result').innerHTML = '<p class="err">Connection error. Is the renewal-reminders function deployed?</p>'; }
+  finally{ b.disabled = false; b.textContent = 'Send due reminders now'; }
+});
+
+// Run due reminders quietly once a day when Revenue is opened (the server never sends the same reminder twice)
+async function autoRunReminders(){
+  if (remAutoDone === isoToday()) return;
+  remAutoDone = isoToday();
+  try{ await runReminders(true); }catch(_e){ /* function not deployed yet: ignore */ }
+}
+
+$('btn-rem-log').addEventListener('click', async () => {
+  revTouch(); $('rem-log').innerHTML = '<p class="muted">Loading...</p>';
+  const r = await rpc('sa_web_reminder_log', { ...revCreds(), p_limit: 200 });
+  if (revAuthFail(r)) return;
+  if (!r || !r.ok){ $('rem-log').innerHTML = '<p class="muted">Unable to load.</p>'; return; }
+  const EM = { sent: 'Sent', pending: 'Waiting', failed: 'Failed', skipped: 'No email' };
+  $('rem-log').innerHTML = r.rows.length ? `<table class="report"><thead><tr><th>When</th><th>Institute</th><th>Reminder</th><th>Expiry</th><th>Dashboard</th><th>Email</th></tr></thead><tbody>` +
+    r.rows.map(x => `<tr><td>${esc(new Date(x.at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }))}</td>
+      <td>${esc(x.name || x.code)}</td><td>${esc(stageName(x.stage))}</td><td>${dmy(x.expiry)}</td><td>${x.dashboard ? '✓' : '—'}</td>
+      <td>${esc(EM[x.email] || x.email)}${x.email_to ? ` <span class="muted">(${esc(x.email_to)})</span>` : ''}${x.error ? `<div class="muted" style="font-size:11px; color:#ff8a7d;">${esc(x.error)}</div>` : ''}</td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted">No reminders sent yet.</p>';
 });
 
 $('btn-rev-pdf').addEventListener('click', () => {
