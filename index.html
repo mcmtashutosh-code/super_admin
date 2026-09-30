@@ -122,6 +122,7 @@
   <div class="bar">
     <div class="brand"><img class="brand-logo" src="sa-icon-192.png" alt=""><span>Platform Administration</span></div>
     <div class="bar-actions">
+      <button class="btn hidden" id="btn-refresh-all" title="Refresh">🔄 Refresh</button>
       <button class="btn hidden" id="btn-install">📲 Install app</button>
       <button class="btn hidden" id="btn-logout">Sign out</button>
     </div>
@@ -422,6 +423,7 @@ async function doLogin(){
       $('view-login').classList.add('hidden');
       $('view-main').classList.remove('hidden');
       $('btn-logout').classList.remove('hidden');
+      $('btn-refresh-all').classList.remove('hidden');
       loadList();
     } else if (r && r.error === 'locked'){
       $('login-err').textContent = 'Too many failed attempts. Please try again in 15 minutes.';
@@ -438,6 +440,7 @@ function logout(){
   $('view-main').classList.add('hidden');
   $('view-login').classList.remove('hidden');
   $('btn-logout').classList.add('hidden');
+  $('btn-refresh-all').classList.add('hidden');
   $('inst-list').innerHTML = '';
 }
 $('btn-login').addEventListener('click', doLogin);
@@ -921,6 +924,18 @@ $('btn-tk-status').addEventListener('click', async () => {
     if (r && r.ok){ toast('Status updated.', 'ok'); openTicket(tkCurrent); }
     else $('tk-err').textContent = (r && r.error) || 'Unable to update status.';
   }catch(_e){ $('tk-err').textContent = 'Connection error.'; }
+});
+
+/* ---------------- SOFT REFRESH (keeps you signed in) ---------------- */
+$('btn-refresh-all').addEventListener('click', async () => {
+  const b = $('btn-refresh-all'); b.disabled = true; b.textContent = '🔄 Refreshing...';
+  try{
+    await loadList();                                              // institutes, usage, support requests
+    if ($('email-box').open) loadEmailLog();
+    if ($('report-box').open && !$('report-out').querySelector('.muted')) $('btn-report').click();
+    toast('Refreshed.', 'ok');
+  }catch(_e){ toast('Unable to refresh. Please check your connection.', 'err'); }
+  finally{ b.disabled = false; b.textContent = '🔄 Refresh'; }
 });
 
 /* ---------------- EMAIL INSTITUTES ---------------- */
