@@ -291,6 +291,119 @@
     </div>
 
     <div class="card">
+      <details id="rev-box">
+        <summary>💰 Revenue</summary>
+
+        <div id="rev-locked" style="margin-top:12px;">
+          <p class="muted" style="margin:0 0 8px;">Revenue data is protected. Enter your super-admin password to view it. The section locks again after 10 minutes of inactivity.</p>
+          <div style="display:flex; gap:8px; max-width:420px;">
+            <input id="rev-pass" type="password" placeholder="Super-admin password" autocomplete="current-password">
+            <button class="btn btn-primary" id="btn-rev-unlock" style="flex:none;">🔓 Unlock</button>
+          </div>
+          <div class="err" id="rev-lock-err"></div>
+        </div>
+
+        <div id="rev-open" class="hidden">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-top:12px;">
+            <div><label style="margin-top:0;">View by</label>
+              <select class="sel" id="rev-g">
+                <option value="month">Monthly</option>
+                <option value="quarter">Quarterly</option>
+                <option value="half">Half-yearly</option>
+                <option value="year">Yearly</option>
+              </select></div>
+            <div><label style="margin-top:0;">From</label><input id="rev-from" type="date" style="width:auto;"></div>
+            <div><label style="margin-top:0;">To</label><input id="rev-to" type="date" style="width:auto;"></div>
+            <button class="btn btn-primary" id="btn-rev-load">Load</button>
+            <button class="btn" id="btn-rev-pdf">📄 PDF / Print</button>
+            <button class="btn" id="btn-rev-lock">🔒 Lock</button>
+          </div>
+
+          <div class="stats" style="margin-top:14px; grid-template-columns:repeat(4, 1fr);">
+            <div class="stat"><b id="rev-total">–</b><span>Received in range</span></div>
+            <div class="stat"><b id="rev-count">–</b><span>Payments</span></div>
+            <div class="stat"><b id="rev-mrr">–</b><span>Expected per month</span></div>
+            <div class="stat"><b id="rev-due">–</b><span>Expiring / expired</span></div>
+          </div>
+
+          <label>Revenue by period</label>
+          <div class="report-wrap" id="rev-buckets"></div>
+
+          <label>Revenue by institute (selected range)</label>
+          <div class="report-wrap" id="rev-inst"></div>
+
+          <label>Recharge status</label>
+          <div class="report-wrap" id="rev-status"></div>
+
+          <div class="grid" style="margin-top:8px;">
+            <div class="card" style="margin-top:10px;">
+              <b>➕ Record a payment / recharge</b>
+              <label>Institute</label><select class="sel" id="pay-inst" style="width:100%;"></select>
+              <div class="grid">
+                <div><label>Amount (₹)</label><input id="pay-amount" type="number" min="0" step="0.01"></div>
+                <div><label>Period</label>
+                  <select class="sel" id="pay-months" style="width:100%;">
+                    <option value="1">1 month</option><option value="3">3 months (quarterly)</option>
+                    <option value="6">6 months (half-yearly)</option><option value="12">12 months (yearly)</option>
+                  </select></div>
+                <div><label>Payment date</label><input id="pay-date" type="date"></div>
+                <div><label>Method</label>
+                  <select class="sel" id="pay-method" style="width:100%;">
+                    <option>UPI</option><option>Bank transfer</option><option>Cash</option><option>Cheque</option><option>Other</option>
+                  </select></div>
+              </div>
+              <label>Reference (transaction ID)</label><input id="pay-ref">
+              <label>Note</label><input id="pay-note">
+              <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);">
+                <input type="checkbox" id="pay-extend" style="width:auto;" checked> Extend the institute's access by this period</label>
+              <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text); margin-top:4px;">
+                <input type="checkbox" id="pay-apply" style="width:auto;" checked> Apply the plan's live-test limit</label>
+              <div class="err" id="pay-err"></div>
+              <button class="btn btn-primary" id="btn-pay-save" style="margin-top:6px;">Save payment</button>
+            </div>
+
+            <div class="card" style="margin-top:10px;">
+              <b>🏷 Institute plan and price</b>
+              <label>Institute</label><select class="sel" id="ip-inst" style="width:100%;"></select>
+              <label>Plan</label><select class="sel" id="ip-plan" style="width:100%;"></select>
+              <label>Special price (₹, blank = plan price)</label><input id="ip-price" type="number" min="0" step="0.01">
+              <div class="err" id="ip-err"></div>
+              <button class="btn btn-primary" id="btn-ip-save" style="margin-top:6px;">Save</button>
+            </div>
+          </div>
+
+          <label>Plans and prices</label>
+          <div class="report-wrap" id="rev-plans"></div>
+          <div class="card" style="margin-top:10px;">
+            <b id="plan-form-title">➕ Add a plan</b>
+            <input type="hidden" id="plan-id">
+            <div class="grid">
+              <div><label>Plan name</label><input id="plan-name" placeholder="e.g. Basic"></div>
+              <div><label>Price (₹)</label><input id="plan-price" type="number" min="0" step="0.01"></div>
+              <div><label>Billing period</label>
+                <select class="sel" id="plan-months" style="width:100%;">
+                  <option value="1">Monthly</option><option value="3">Quarterly</option>
+                  <option value="6">Half-yearly</option><option value="12">Yearly</option>
+                </select></div>
+              <div><label>Live tests per month (blank = unlimited)</label><input id="plan-tests" type="number" min="0"></div>
+            </div>
+            <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);">
+              <input type="checkbox" id="plan-active" style="width:auto;" checked> Active (available for new recharges)</label>
+            <div class="err" id="plan-err"></div>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="btn-plan-save">Save plan</button>
+              <button class="btn" id="btn-plan-new">New plan</button>
+            </div>
+            <p class="muted" style="font-size:12px; margin:8px 0 0;">Changing a price affects future payments only; recorded payments keep their amounts.</p>
+          </div>
+
+          <label>Payments (selected range)</label>
+          <div class="report-wrap" id="rev-payments"></div>
+        </div>
+      </details>
+    </div>
+
+    <div class="card">
       <details id="report-box">
         <summary>📊 Activity report</summary>
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px;">
@@ -438,6 +551,7 @@ async function doLogin(){
   finally{ btn.disabled = false; btn.textContent = 'Login'; }
 }
 function logout(){
+  if (typeof revLock === 'function') revLock();
   sa = null; institutes = [];
   document.querySelectorAll('.pw-wrap input').forEach(i => { i.type = 'password'; });
   document.querySelectorAll('.pw-toggle').forEach(b => b.textContent = 'SHOW');
@@ -1011,6 +1125,267 @@ $('btn-em-send').addEventListener('click', async () => {
     loadEmailLog();
   }catch(_e){ errEl.textContent = 'Connection error. Please try again.'; }
   finally{ btn.disabled = false; btn.textContent = 'Send email'; }
+});
+
+/* ---------------- REVENUE (password-protected) ---------------- */
+let revPass = null, revTimer = null, revData = null, revPlans = [];
+const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
+const inr = n => INR.format(Number(n || 0));
+const PERIOD_NAME = { 1: 'Monthly', 3: 'Quarterly', 6: 'Half-yearly', 12: 'Yearly' };
+const G_NAME = { month: 'Monthly', quarter: 'Quarterly', half: 'Half-yearly', year: 'Yearly' };
+const REV_STATUS = { active: ['Active', 'active'], expiring: ['Expiring soon', 'warn'], expired: ['Expired', 'expired'],
+                     suspended: ['Suspended', 'suspended'], no_end_date: ['No end date', 'active'], main: ['Main institute', 'active'] };
+function revCreds(){ return { p_username: sa.u, p_password: revPass }; }
+function revTouch(){ clearTimeout(revTimer); revTimer = setTimeout(() => { revLock(); toast('Revenue locked after 10 minutes of inactivity.'); }, 10 * 60 * 1000); }
+function revLock(){
+  revPass = null; revData = null; clearTimeout(revTimer);
+  $('rev-open').classList.add('hidden'); $('rev-locked').classList.remove('hidden');
+  $('rev-pass').value = ''; $('rev-lock-err').textContent = '';
+}
+function revAuthFail(r){
+  if (r && (r.error === 'invalid' || r.error === 'locked')){
+    revLock();
+    $('rev-lock-err').textContent = r.error === 'locked' ? 'Too many failed attempts. Try again in 15 minutes.' : 'Please unlock again.';
+    return true;
+  }
+  return false;
+}
+function fyStart(){ const d = new Date(); const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `${y}-04-01`; }
+function isoToday(){ const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+
+$('btn-rev-unlock').addEventListener('click', async () => {
+  const p = $('rev-pass').value; $('rev-lock-err').textContent = '';
+  if (!p){ $('rev-lock-err').textContent = 'Please enter your password.'; return; }
+  const b = $('btn-rev-unlock'); b.disabled = true;
+  try{
+    const r = await rpc('sa_web_plans', { p_username: sa.u, p_password: p });
+    if (!r || !r.ok){
+      $('rev-lock-err').textContent = r && r.error === 'locked' ? 'Too many failed attempts. Try again in 15 minutes.' : 'Incorrect password.';
+      return;
+    }
+    revPass = p; $('rev-pass').value = '';
+    $('rev-locked').classList.add('hidden'); $('rev-open').classList.remove('hidden');
+    if (!$('rev-from').value) $('rev-from').value = fyStart();
+    if (!$('rev-to').value) $('rev-to').value = isoToday();
+    if (!$('pay-date').value) $('pay-date').value = isoToday();
+    revPlans = r.plans || [];
+    revTouch();
+    await loadRevenue();
+  }catch(_e){ $('rev-lock-err').textContent = 'Connection error.'; }
+  finally{ b.disabled = false; }
+});
+$('rev-pass').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-rev-unlock').click(); });
+$('btn-rev-lock').addEventListener('click', revLock);
+$('rev-box').addEventListener('toggle', () => { if (!$('rev-box').open) revLock(); });
+$('btn-rev-load').addEventListener('click', () => loadRevenue());
+$('rev-g').addEventListener('change', () => loadRevenue());
+
+async function loadRevenue(){
+  if (!revPass) return;
+  revTouch();
+  try{
+    const [r, pl] = await Promise.all([
+      rpc('sa_web_revenue', { ...revCreds(), p_granularity: $('rev-g').value, p_from: $('rev-from').value || null, p_to: $('rev-to').value || null }),
+      rpc('sa_web_plans', revCreds())
+    ]);
+    if (revAuthFail(r) || revAuthFail(pl)) return;
+    if (!r || !r.ok){ toast((r && r.error) || 'Unable to load revenue.', 'err'); return; }
+    revData = r; revPlans = (pl && pl.plans) || [];
+    renderRevenue();
+  }catch(_e){ toast('Connection error.', 'err'); }
+}
+
+function renderRevenue(){
+  const r = revData;
+  $('rev-total').textContent = inr(r.total);
+  $('rev-count').textContent = r.count;
+  $('rev-mrr').textContent = inr(r.mrr);
+  $('rev-due').textContent = r.status.filter(s => s.recharge === 'expiring' || s.recharge === 'expired').length;
+
+  const maxB = Math.max(1, ...r.buckets.map(b => Number(b.total)));
+  $('rev-buckets').innerHTML = `<table class="report"><thead><tr><th>${esc(G_NAME[r.granularity])} period</th><th>Payments</th><th>Amount</th><th style="width:40%;"></th></tr></thead><tbody>` +
+    r.buckets.map(b => `<tr><td>${esc(b.label)}</td><td>${b.count}</td><td><b>${inr(b.total)}</b></td>
+      <td style="text-align:left;"><div style="height:10px; border-radius:5px; background:var(--accent); width:${Math.round(Number(b.total) * 100 / maxB)}%;"></div></td></tr>`).join('') +
+    `<tr><td><b>Total</b></td><td><b>${r.count}</b></td><td><b>${inr(r.total)}</b></td><td></td></tr></tbody></table>`;
+
+  $('rev-inst').innerHTML = r.by_institute.length ? `<table class="report"><thead><tr><th>Institute</th><th>Payments</th><th>Amount</th><th>Share</th></tr></thead><tbody>` +
+    r.by_institute.map(x => `<tr><td>${esc(x.name)} <span class="muted">(${esc(x.code)})</span></td><td>${x.count}</td><td><b>${inr(x.total)}</b></td>
+      <td>${Number(r.total) > 0 ? Math.round(Number(x.total) * 1000 / Number(r.total)) / 10 : 0}%</td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted">No payments in this range.</p>';
+
+  $('rev-status').innerHTML = `<table class="report"><thead><tr><th>Institute</th><th>Plan</th><th>Price</th><th>Per month</th><th>Paid until</th><th>Status</th><th>Last payment</th><th>Lifetime</th><th></th></tr></thead><tbody>` +
+    r.status.map(s => {
+      const st = REV_STATUS[s.recharge] || [s.recharge, 'active'];
+      const until = s.paid_until ? `${fmtDate(s.paid_until)}${s.days_left !== null ? ` <span class="muted">(${s.days_left > 0 ? s.days_left + 'd left' : 'ended'})</span>` : ''}` : '—';
+      return `<tr><td>${esc(s.name)} <span class="muted">(${esc(s.code)})</span></td>
+        <td>${esc(s.plan || '—')}${s.period_months ? ` <span class="muted">· ${PERIOD_NAME[s.period_months]}</span>` : ''}</td>
+        <td>${s.price !== null && s.price !== undefined ? inr(s.price) + (s.custom_price !== null && s.custom_price !== undefined ? ' <span class="muted">(special)</span>' : '') : '—'}</td>
+        <td>${s.monthly_equivalent !== null && s.monthly_equivalent !== undefined ? inr(s.monthly_equivalent) : '—'}</td>
+        <td>${until}</td><td><span class="pill ${st[1]}">${esc(st[0])}</span></td>
+        <td>${s.last_paid_on ? fmtDate(s.last_paid_on) + ' · ' + inr(s.last_amount) : '—'}</td><td>${inr(s.lifetime_total)}</td>
+        <td><button class="btn rev-pay" data-code="${esc(s.code)}" style="padding:4px 9px;">➕ Payment</button>
+            <button class="btn rev-plan" data-code="${esc(s.code)}" style="padding:4px 9px;">🏷 Plan</button></td></tr>`; }).join('') + '</tbody></table>';
+
+  $('rev-plans').innerHTML = revPlans.length ? `<table class="report"><thead><tr><th>Plan</th><th>Price</th><th>Period</th><th>Per month</th><th>Live tests</th><th>Institutes</th><th>Status</th><th></th></tr></thead><tbody>` +
+    revPlans.map(p => `<tr><td>${esc(p.name)}</td><td><b>${inr(p.price)}</b></td><td>${PERIOD_NAME[p.period_months]}</td>
+      <td>${inr(Number(p.price) / p.period_months)}</td><td>${p.tests_per_cycle ?? 'Unlimited'}</td><td>${p.institutes}</td>
+      <td>${p.is_active ? 'Active' : 'Inactive'}</td><td><button class="btn plan-edit" data-id="${p.id}" style="padding:4px 9px;">✏️ Edit</button></td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted">No plans yet. Add your first plan below.</p>';
+
+  $('rev-payments').innerHTML = r.payments.length ? `<table class="report"><thead><tr><th>Date</th><th>Institute</th><th>Amount</th><th>Plan / period</th><th>Access covered</th><th>Method</th><th>Reference</th><th></th></tr></thead><tbody>` +
+    r.payments.map(p => `<tr><td>${fmtDate(p.paid_on)}</td><td>${esc(p.name)}${p.deleted_institute ? ' <span class="muted">(deleted)</span>' : ''}</td><td><b>${inr(p.amount)}</b></td>
+      <td>${esc(p.plan || '—')}${p.months ? ' · ' + p.months + ' mo' : ''}</td>
+      <td>${p.coverage_start ? fmtDate(p.coverage_start) + ' – ' + fmtDate(p.coverage_end) : '—'}</td>
+      <td>${esc(p.method || '—')}</td><td>${esc(p.reference || '—')}</td>
+      <td><button class="btn btn-danger pay-del" data-id="${p.id}" data-name="${esc(p.name)}" data-amount="${p.amount}" style="padding:4px 9px;">🗑</button></td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted">No payments in this range.</p>';
+
+  const instOpts = r.status.map(s => `<option value="${esc(s.code)}">${esc(s.name)} (${esc(s.code)})</option>`).join('');
+  const keep = [$('pay-inst').value, $('ip-inst').value];
+  $('pay-inst').innerHTML = instOpts; $('ip-inst').innerHTML = instOpts;
+  if (keep[0]) $('pay-inst').value = keep[0];
+  if (keep[1]) $('ip-inst').value = keep[1];
+  $('ip-plan').innerHTML = '<option value="">— No plan —</option>' + revPlans.map(p => `<option value="${p.id}">${esc(p.name)} · ${inr(p.price)} ${PERIOD_NAME[p.period_months].toLowerCase()}${p.is_active ? '' : ' (inactive)'}</option>`).join('');
+  prefillPayment(); prefillInstPlan();
+}
+
+function statusOf(code){ return revData ? revData.status.find(s => s.code === code) : null; }
+function prefillPayment(){
+  const s = statusOf($('pay-inst').value);
+  if (!s) return;
+  $('pay-amount').value = (s.price !== null && s.price !== undefined) ? s.price : '';
+  if (s.period_months) $('pay-months').value = String(s.period_months);
+}
+function prefillInstPlan(){
+  const s = statusOf($('ip-inst').value);
+  if (!s) return;
+  $('ip-plan').value = s.plan_id ? String(s.plan_id) : '';
+  $('ip-price').value = (s.custom_price !== null && s.custom_price !== undefined) ? s.custom_price : '';
+}
+$('pay-inst').addEventListener('change', prefillPayment);
+$('ip-inst').addEventListener('change', prefillInstPlan);
+
+$('rev-status').addEventListener('click', (e) => {
+  const pay = e.target.closest('.rev-pay'), pl = e.target.closest('.rev-plan');
+  if (pay){ $('pay-inst').value = pay.dataset.code; prefillPayment(); $('pay-amount').focus(); $('pay-inst').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  if (pl){ $('ip-inst').value = pl.dataset.code; prefillInstPlan(); $('ip-inst').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+});
+
+$('btn-pay-save').addEventListener('click', async () => {
+  const errEl = $('pay-err'); errEl.textContent = ''; revTouch();
+  const code = $('pay-inst').value, amount = $('pay-amount').value, date = $('pay-date').value;
+  if (!code){ errEl.textContent = 'Please choose an institute.'; return; }
+  if (amount === '' || Number(amount) < 0){ errEl.textContent = 'Please enter the amount received.'; return; }
+  if (!date){ errEl.textContent = 'Please enter the payment date.'; return; }
+  const s = statusOf(code);
+  if (!confirm(`Record ${inr(amount)} from ${s ? s.name : code} (${$('pay-months').selectedOptions[0].text})?${$('pay-extend').checked && code !== 'VIDYAPATH' ? '\n\nThe institute\'s access will be extended accordingly.' : ''}`)) return;
+  const b = $('btn-pay-save'); b.disabled = true;
+  try{
+    const r = await rpc('sa_web_payment_add', { ...revCreds(), p_code: code, p_amount: Number(amount), p_paid_on: date,
+      p_period_months: Number($('pay-months').value), p_method: $('pay-method').value, p_reference: $('pay-ref').value.trim(),
+      p_note: $('pay-note').value.trim(), p_extend_access: $('pay-extend').checked, p_apply_plan_limits: $('pay-apply').checked });
+    if (revAuthFail(r)) return;
+    if (r && r.ok){
+      toast(r.access_until ? `Payment saved. Access extended until ${fmtDate(r.access_until)}.` : 'Payment saved.', 'ok');
+      $('pay-ref').value = ''; $('pay-note').value = '';
+      await loadRevenue(); loadList();
+    } else errEl.textContent = (r && r.error) || 'Unable to save the payment.';
+  }catch(_e){ errEl.textContent = 'Connection error.'; }
+  finally{ b.disabled = false; }
+});
+
+$('rev-payments').addEventListener('click', async (e) => {
+  const b = e.target.closest('.pay-del'); if (!b) return; revTouch();
+  if (!confirm(`Delete the payment of ${inr(b.dataset.amount)} from ${b.dataset.name}?\n\nThis removes the record only; the institute's access end date is not changed.`)) return;
+  try{
+    const r = await rpc('sa_web_payment_delete', { ...revCreds(), p_id: Number(b.dataset.id) });
+    if (revAuthFail(r)) return;
+    if (r && r.ok){ toast('Payment deleted.', 'ok'); loadRevenue(); }
+    else toast((r && r.error) || 'Unable to delete.', 'err');
+  }catch(_e){ toast('Connection error.', 'err'); }
+});
+
+$('btn-ip-save').addEventListener('click', async () => {
+  const errEl = $('ip-err'); errEl.textContent = ''; revTouch();
+  const price = $('ip-price').value.trim();
+  try{
+    const r = await rpc('sa_web_institute_billing_set', { ...revCreds(), p_code: $('ip-inst').value,
+      p_plan_id: $('ip-plan').value ? Number($('ip-plan').value) : null, p_custom_price: price === '' ? null : Number(price) });
+    if (revAuthFail(r)) return;
+    if (r && r.ok){ toast('Institute plan saved.', 'ok'); loadRevenue(); loadList(); }
+    else errEl.textContent = (r && r.error) || 'Unable to save.';
+  }catch(_e){ errEl.textContent = 'Connection error.'; }
+});
+
+function resetPlanForm(){
+  $('plan-id').value = ''; $('plan-name').value = ''; $('plan-price').value = ''; $('plan-months').value = '1';
+  $('plan-tests').value = ''; $('plan-active').checked = true; $('plan-err').textContent = ''; $('plan-form-title').textContent = '➕ Add a plan';
+}
+$('btn-plan-new').addEventListener('click', resetPlanForm);
+$('rev-plans').addEventListener('click', (e) => {
+  const b = e.target.closest('.plan-edit'); if (!b) return;
+  const p = revPlans.find(x => String(x.id) === b.dataset.id); if (!p) return;
+  $('plan-id').value = p.id; $('plan-name').value = p.name; $('plan-price').value = p.price; $('plan-months').value = String(p.period_months);
+  $('plan-tests').value = p.tests_per_cycle ?? ''; $('plan-active').checked = !!p.is_active; $('plan-form-title').textContent = `✏️ Edit plan: ${p.name}`;
+  $('plan-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+$('btn-plan-save').addEventListener('click', async () => {
+  const errEl = $('plan-err'); errEl.textContent = ''; revTouch();
+  const name = $('plan-name').value.trim(), price = $('plan-price').value, tests = $('plan-tests').value.trim();
+  if (name.length < 2){ errEl.textContent = 'Please enter a plan name.'; return; }
+  if (price === '' || Number(price) < 0){ errEl.textContent = 'Please enter a price.'; return; }
+  try{
+    const r = await rpc('sa_web_plan_save', { ...revCreds(), p_id: $('plan-id').value ? Number($('plan-id').value) : null,
+      p_name: name, p_price: Number(price), p_period_months: Number($('plan-months').value),
+      p_tests_per_cycle: tests === '' ? null : Number(tests), p_is_active: $('plan-active').checked });
+    if (revAuthFail(r)) return;
+    if (r && r.ok){ toast('Plan saved.', 'ok'); resetPlanForm(); loadRevenue(); }
+    else errEl.textContent = (r && r.error) || 'Unable to save the plan.';
+  }catch(_e){ errEl.textContent = 'Connection error.'; }
+});
+
+$('btn-rev-pdf').addEventListener('click', () => {
+  if (!revData){ toast('Load the report first.', 'err'); return; }
+  revTouch();
+  const r = revData, gen = new Date().toLocaleString('en-IN', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  const tbl = (head, rows) => `<table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Revenue report ${esc(r.from)} to ${esc(r.to)}</title>
+    <style>
+      @page { size: A4; margin: 14mm; }
+      body { font-family: Arial, Helvetica, sans-serif; color: #1b2a41; margin: 0; font-size: 12px; }
+      h1 { font-size: 20px; margin: 0 0 4px; } h2 { font-size: 14px; margin: 18px 0 6px; }
+      .sub { color: #666; margin-bottom: 12px; }
+      .sum { display: flex; gap: 22px; margin: 10px 0 4px; } .sum div { font-size: 12px; } .sum b { display:block; font-size: 16px; }
+      table { width: 100%; border-collapse: collapse; } th { background: #1b2a41; color: #fff; padding: 6px; text-align: left; font-size: 11px; }
+      td { padding: 5px 6px; border-bottom: 1px solid #e3e7ee; } tr:nth-child(even) td { background: #f6f8fb; } tr { page-break-inside: avoid; }
+      .r { text-align: right; } .foot { margin-top: 16px; font-size: 10px; color: #888; }
+    </style></head><body>
+    <h1>Vidyapath CBT Platform — Revenue Report</h1>
+    <div class="sub">${esc(G_NAME[r.granularity])} view · ${fmtDate(r.from)} to ${fmtDate(r.to)} · generated ${esc(gen)} · Confidential</div>
+    <div class="sum"><div>Received in range<b>${inr(r.total)}</b></div><div>Payments<b>${r.count}</b></div>
+      <div>Expected per month<b>${inr(r.mrr)}</b></div><div>Expiring / expired<b>${r.status.filter(s => s.recharge === 'expiring' || s.recharge === 'expired').length}</b></div></div>
+    <h2>Revenue by period</h2>
+    ${tbl(['Period', 'Payments', 'Amount'], r.buckets.map(b => `<tr><td>${esc(b.label)}</td><td>${b.count}</td><td class="r">${inr(b.total)}</td></tr>`)
+        .concat([`<tr><td><b>Total</b></td><td><b>${r.count}</b></td><td class="r"><b>${inr(r.total)}</b></td></tr>`]))}
+    <h2>Revenue by institute</h2>
+    ${r.by_institute.length ? tbl(['Institute', 'Payments', 'Amount', 'Share'], r.by_institute.map(x => `<tr><td>${esc(x.name)} (${esc(x.code)})</td><td>${x.count}</td><td class="r">${inr(x.total)}</td><td>${Number(r.total) > 0 ? Math.round(Number(x.total) * 1000 / Number(r.total)) / 10 : 0}%</td></tr>`)) : '<p>No payments in this range.</p>'}
+    <h2>Recharge status</h2>
+    ${tbl(['Institute', 'Plan', 'Price', 'Paid until', 'Status', 'Last payment', 'Lifetime'], r.status.map(s => `<tr><td>${esc(s.name)} (${esc(s.code)})</td>
+        <td>${esc(s.plan || '—')}${s.period_months ? ' · ' + PERIOD_NAME[s.period_months] : ''}</td><td class="r">${s.price !== null && s.price !== undefined ? inr(s.price) : '—'}</td>
+        <td>${s.paid_until ? fmtDate(s.paid_until) : '—'}</td><td>${esc((REV_STATUS[s.recharge] || [s.recharge])[0])}</td>
+        <td>${s.last_paid_on ? fmtDate(s.last_paid_on) + ' · ' + inr(s.last_amount) : '—'}</td><td class="r">${inr(s.lifetime_total)}</td></tr>`))}
+    <h2>Payments</h2>
+    ${r.payments.length ? tbl(['Date', 'Institute', 'Amount', 'Plan / period', 'Access covered', 'Method', 'Reference'], r.payments.map(p => `<tr><td>${fmtDate(p.paid_on)}</td><td>${esc(p.name)}</td>
+        <td class="r">${inr(p.amount)}</td><td>${esc(p.plan || '—')}${p.months ? ' · ' + p.months + ' mo' : ''}</td>
+        <td>${p.coverage_start ? fmtDate(p.coverage_start) + ' – ' + fmtDate(p.coverage_end) : '—'}</td><td>${esc(p.method || '—')}</td><td>${esc(p.reference || '—')}</td></tr>`)) : '<p>No payments in this range.</p>'}
+    <div class="foot">Amounts in Indian Rupees. This report is generated from payments recorded in the platform and is not a tax invoice.</div>
+    </body></html>`;
+  const frame = document.createElement('iframe');
+  frame.style.cssText = 'position:fixed; right:0; bottom:0; width:0; height:0; border:0; visibility:hidden;';
+  document.body.appendChild(frame);
+  const doc = frame.contentWindow.document; doc.open(); doc.write(html); doc.close();
+  setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); setTimeout(() => frame.remove(), 60000); }, 300);
+  toast('Choose "Save as PDF" or a printer in the print dialog.', 'ok');
 });
 
 /* ---------------- ACTIVITY REPORT ---------------- */
