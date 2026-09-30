@@ -295,10 +295,23 @@
         <summary>💰 Revenue</summary>
 
         <div id="rev-locked" style="margin-top:12px;">
-          <p class="muted" style="margin:0 0 8px;">Revenue data is protected. Enter your super-admin password to view it. The section locks again after 10 minutes of inactivity.</p>
-          <div style="display:flex; gap:8px; max-width:420px;">
-            <input id="rev-pass" type="password" placeholder="Super-admin password" autocomplete="current-password">
-            <button class="btn btn-primary" id="btn-rev-unlock" style="flex:none;">🔓 Unlock</button>
+          <div id="rev-pin-enter">
+            <p class="muted" style="margin:0 0 8px;">Revenue data is protected by a PIN. The section locks again after 10 minutes of inactivity.</p>
+            <div style="display:flex; gap:8px; max-width:360px;">
+              <input id="rev-pin" type="password" inputmode="numeric" maxlength="6" placeholder="Revenue PIN" autocomplete="off">
+              <button class="btn btn-primary" id="btn-rev-unlock" style="flex:none;">🔓 Unlock</button>
+            </div>
+            <p class="muted" style="font-size:12px; margin:8px 0 0;">Forgot the PIN? Reset it in the Supabase SQL Editor: <code>select sa_set_revenue_pin('your_username', 'new PIN');</code></p>
+          </div>
+          <div id="rev-pin-setup" class="hidden">
+            <p style="margin:0 0 6px;"><b>Set up your revenue PIN</b></p>
+            <p class="muted" style="margin:0 0 8px;">Choose a 4–6 digit PIN. You will use it every time you open Revenue. Confirm with your super-admin password.</p>
+            <label>Super-admin password</label><input id="rev-setup-pass" type="password" autocomplete="current-password">
+            <div class="grid">
+              <div><label>New PIN</label><input id="rev-setup-pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></div>
+              <div><label>Confirm PIN</label><input id="rev-setup-pin2" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></div>
+            </div>
+            <button class="btn btn-primary" id="btn-rev-setup" style="margin-top:10px;">Set PIN</button>
           </div>
           <div class="err" id="rev-lock-err"></div>
         </div>
@@ -316,7 +329,21 @@
             <div><label style="margin-top:0;">To</label><input id="rev-to" type="date" style="width:auto;"></div>
             <button class="btn btn-primary" id="btn-rev-load">Load</button>
             <button class="btn" id="btn-rev-pdf">📄 PDF / Print</button>
+            <button class="btn" id="btn-rev-chpin">🔑 Change PIN</button>
             <button class="btn" id="btn-rev-lock">🔒 Lock</button>
+          </div>
+          <div class="card hidden" id="rev-chpin-box" style="margin-top:12px; max-width:520px;">
+            <b>🔑 Change revenue PIN</b>
+            <label>Current PIN</label><input id="chpin-old" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+            <div class="grid">
+              <div><label>New PIN (4–6 digits)</label><input id="chpin-new" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></div>
+              <div><label>Confirm new PIN</label><input id="chpin-new2" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></div>
+            </div>
+            <div class="err" id="chpin-err"></div>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="btn-chpin-save">Change PIN</button>
+              <button class="btn" id="btn-chpin-cancel">Cancel</button>
+            </div>
           </div>
 
           <div class="stats" style="margin-top:14px; grid-template-columns:repeat(4, 1fr);">
@@ -1128,24 +1155,34 @@ $('btn-em-send').addEventListener('click', async () => {
 });
 
 /* ---------------- REVENUE (password-protected) ---------------- */
-let revPass = null, revTimer = null, revData = null, revPlans = [];
+let revPin = null, revTimer = null, revData = null, revPlans = [];
 const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
 const inr = n => INR.format(Number(n || 0));
 const PERIOD_NAME = { 1: 'Monthly', 3: 'Quarterly', 6: 'Half-yearly', 12: 'Yearly' };
 const G_NAME = { month: 'Monthly', quarter: 'Quarterly', half: 'Half-yearly', year: 'Yearly' };
 const REV_STATUS = { active: ['Active', 'active'], expiring: ['Expiring soon', 'warn'], expired: ['Expired', 'expired'],
                      suspended: ['Suspended', 'suspended'], no_end_date: ['No end date', 'active'], main: ['Main institute', 'active'] };
-function revCreds(){ return { p_username: sa.u, p_password: revPass }; }
+function revCreds(){ return { p_username: sa.u, p_password: sa.p, p_pin: revPin }; }
 function revTouch(){ clearTimeout(revTimer); revTimer = setTimeout(() => { revLock(); toast('Revenue locked after 10 minutes of inactivity.'); }, 10 * 60 * 1000); }
 function revLock(){
-  revPass = null; revData = null; clearTimeout(revTimer);
+  revPin = null; revData = null; clearTimeout(revTimer);
   $('rev-open').classList.add('hidden'); $('rev-locked').classList.remove('hidden');
-  $('rev-pass').value = ''; $('rev-lock-err').textContent = '';
+  $('rev-chpin-box').classList.add('hidden');
+  ['rev-pin','rev-setup-pass','rev-setup-pin','rev-setup-pin2','chpin-old','chpin-new','chpin-new2'].forEach(id => { $(id).value = ''; });
+  $('rev-lock-err').textContent = '';
+}
+const PIN_MSG = { pin_invalid: 'Incorrect PIN.', pin_locked: 'Too many wrong PINs. Revenue is locked for 15 minutes.', no_pin: 'Please set up your revenue PIN first.' };
+function showPinMode(hasPin){
+  $('rev-pin-enter').classList.toggle('hidden', !hasPin);
+  $('rev-pin-setup').classList.toggle('hidden', !!hasPin);
 }
 function revAuthFail(r){
-  if (r && (r.error === 'invalid' || r.error === 'locked')){
+  if (!r) return false;
+  if (r.error === 'invalid' || r.error === 'locked'){ revLock(); handleAuthError(r); return true; }
+  if (PIN_MSG[r.error]){
     revLock();
-    $('rev-lock-err').textContent = r.error === 'locked' ? 'Too many failed attempts. Try again in 15 minutes.' : 'Please unlock again.';
+    if (r.error === 'no_pin') showPinMode(false);
+    $('rev-lock-err').textContent = r.error === 'pin_invalid' ? 'Please unlock again.' : PIN_MSG[r.error];
     return true;
   }
   return false;
@@ -1153,35 +1190,103 @@ function revAuthFail(r){
 function fyStart(){ const d = new Date(); const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `${y}-04-01`; }
 function isoToday(){ const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
 
+async function revOpenWith(pin, plans){
+  revPin = pin;
+  $('rev-locked').classList.add('hidden'); $('rev-open').classList.remove('hidden');
+  if (!$('rev-from').value) $('rev-from').value = fyStart();
+  if (!$('rev-to').value) $('rev-to').value = isoToday();
+  if (!$('pay-date').value) $('pay-date').value = isoToday();
+  revPlans = plans || [];
+  revTouch();
+  await loadRevenue();
+}
 $('btn-rev-unlock').addEventListener('click', async () => {
-  const p = $('rev-pass').value; $('rev-lock-err').textContent = '';
-  if (!p){ $('rev-lock-err').textContent = 'Please enter your password.'; return; }
+  const pin = $('rev-pin').value.trim(); $('rev-lock-err').textContent = '';
+  if (!/^\d{4,6}$/.test(pin)){ $('rev-lock-err').textContent = 'Please enter your 4–6 digit PIN.'; return; }
   const b = $('btn-rev-unlock'); b.disabled = true;
   try{
-    const r = await rpc('sa_web_plans', { p_username: sa.u, p_password: p });
+    const r = await rpc('sa_web_plans', { p_username: sa.u, p_password: sa.p, p_pin: pin });
+    if (r && (r.error === 'invalid' || r.error === 'locked')){ handleAuthError(r); return; }
     if (!r || !r.ok){
-      $('rev-lock-err').textContent = r && r.error === 'locked' ? 'Too many failed attempts. Try again in 15 minutes.' : 'Incorrect password.';
+      if (r && r.error === 'no_pin') showPinMode(false);
+      $('rev-lock-err').textContent = (r && PIN_MSG[r.error]) || 'Unable to unlock. Please try again.';
+      $('rev-pin').value = '';
       return;
     }
-    revPass = p; $('rev-pass').value = '';
-    $('rev-locked').classList.add('hidden'); $('rev-open').classList.remove('hidden');
-    if (!$('rev-from').value) $('rev-from').value = fyStart();
-    if (!$('rev-to').value) $('rev-to').value = isoToday();
-    if (!$('pay-date').value) $('pay-date').value = isoToday();
-    revPlans = r.plans || [];
-    revTouch();
-    await loadRevenue();
+    $('rev-pin').value = '';
+    await revOpenWith(pin, r.plans);
   }catch(_e){ $('rev-lock-err').textContent = 'Connection error.'; }
   finally{ b.disabled = false; }
 });
-$('rev-pass').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-rev-unlock').click(); });
+$('rev-pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-rev-unlock').click(); });
+
+$('btn-rev-setup').addEventListener('click', async () => {
+  const pass = $('rev-setup-pass').value, pin = $('rev-setup-pin').value.trim(), pin2 = $('rev-setup-pin2').value.trim();
+  $('rev-lock-err').textContent = '';
+  if (!pass){ $('rev-lock-err').textContent = 'Please enter your super-admin password.'; return; }
+  if (!/^\d{4,6}$/.test(pin)){ $('rev-lock-err').textContent = 'The PIN must be 4 to 6 digits.'; return; }
+  if (pin !== pin2){ $('rev-lock-err').textContent = 'The two PINs do not match.'; return; }
+  const b = $('btn-rev-setup'); b.disabled = true;
+  try{
+    const r = await rpc('sa_web_rev_pin_setup', { p_username: sa.u, p_password: sa.p, p_confirm_password: pass, p_new_pin: pin });
+    if (r && (r.error === 'invalid' || r.error === 'locked')){ handleAuthError(r); return; }
+    if (r && r.ok){
+      toast('Revenue PIN set.', 'ok');
+      ['rev-setup-pass','rev-setup-pin','rev-setup-pin2'].forEach(id => { $(id).value = ''; });
+      showPinMode(true);
+      const pl = await rpc('sa_web_plans', { p_username: sa.u, p_password: sa.p, p_pin: pin });
+      if (pl && pl.ok) await revOpenWith(pin, pl.plans);
+    } else {
+      $('rev-lock-err').textContent = (r && r.error) || 'Unable to set the PIN.';
+      if (r && /already set/.test(r.error || '')) showPinMode(true);
+    }
+  }catch(_e){ $('rev-lock-err').textContent = 'Connection error.'; }
+  finally{ b.disabled = false; }
+});
+
+$('btn-rev-chpin').addEventListener('click', () => { $('rev-chpin-box').classList.toggle('hidden'); $('chpin-err').textContent = ''; revTouch(); });
+$('btn-chpin-cancel').addEventListener('click', () => {
+  $('rev-chpin-box').classList.add('hidden');
+  ['chpin-old','chpin-new','chpin-new2'].forEach(id => { $(id).value = ''; });
+});
+$('btn-chpin-save').addEventListener('click', async () => {
+  const oldPin = $('chpin-old').value.trim(), n1 = $('chpin-new').value.trim(), n2 = $('chpin-new2').value.trim();
+  const errEl = $('chpin-err'); errEl.textContent = ''; revTouch();
+  if (!/^\d{4,6}$/.test(oldPin)){ errEl.textContent = 'Please enter your current PIN.'; return; }
+  if (!/^\d{4,6}$/.test(n1)){ errEl.textContent = 'The new PIN must be 4 to 6 digits.'; return; }
+  if (n1 !== n2){ errEl.textContent = 'The two new PINs do not match.'; return; }
+  const b = $('btn-chpin-save'); b.disabled = true;
+  try{
+    const r = await rpc('sa_web_rev_pin_change', { p_username: sa.u, p_password: sa.p, p_old_pin: oldPin, p_new_pin: n1 });
+    if (r && (r.error === 'invalid' || r.error === 'locked')){ handleAuthError(r); return; }
+    if (r && r.ok){
+      revPin = n1;
+      toast('Revenue PIN changed.', 'ok');
+      $('rev-chpin-box').classList.add('hidden');
+      ['chpin-old','chpin-new','chpin-new2'].forEach(id => { $(id).value = ''; });
+    } else if (r && r.error === 'pin_locked'){
+      revAuthFail(r);
+    } else {
+      errEl.textContent = r && r.error === 'pin_invalid' ? 'The current PIN is incorrect.' : ((r && r.error) || 'Unable to change the PIN.');
+    }
+  }catch(_e){ errEl.textContent = 'Connection error.'; }
+  finally{ b.disabled = false; }
+});
 $('btn-rev-lock').addEventListener('click', revLock);
-$('rev-box').addEventListener('toggle', () => { if (!$('rev-box').open) revLock(); });
+$('rev-box').addEventListener('toggle', async () => {
+  if (!$('rev-box').open){ revLock(); return; }
+  if (revPin) return;
+  try{
+    const r = await rpc('sa_web_rev_pin_status', { p_username: sa.u, p_password: sa.p });
+    if (r && (r.error === 'invalid' || r.error === 'locked')){ handleAuthError(r); return; }
+    if (r && r.ok) showPinMode(!!r.has_pin);
+  }catch(_e){}
+});
 $('btn-rev-load').addEventListener('click', () => loadRevenue());
 $('rev-g').addEventListener('change', () => loadRevenue());
 
 async function loadRevenue(){
-  if (!revPass) return;
+  if (!revPin) return;
   revTouch();
   try{
     const [r, pl] = await Promise.all([
