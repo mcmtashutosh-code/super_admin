@@ -268,6 +268,9 @@
       <details id="email-box">
         <summary>✉️ Email institutes</summary>
         <p class="muted" style="margin:10px 0 0;">Emails are sent from the platform Gmail account to each institute's contact email. Every institute receives its own copy.</p>
+        <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text); margin-top:12px;">
+          <input type="checkbox" id="em-dash" style="width:auto;" checked> Also show in the institute's admin dashboard (Platform messages)
+        </label>
         <label>Recipients</label>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
           <button class="btn" id="btn-em-all" type="button">Select all active</button>
@@ -660,7 +663,6 @@ $('inst-list').addEventListener('click', async (e) => {
   if (act === 'edit'){ card.querySelector('.edit-box').classList.toggle('hidden'); return; }
 
   if (act === 'email'){
-    if (!inst.contact_email){ toast('This institute has no contact email. Add one in Edit details first.', 'err'); return; }
     renderEmailList([inst.code]);
     $('email-box').open = true;
     $('email-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -943,9 +945,9 @@ function renderEmailList(checkedCodes){
   const checked = new Set(checkedCodes || []);
   $('em-list').innerHTML = institutes.length ? institutes.map(i => {
     const has = !!(i.contact_email && String(i.contact_email).trim());
-    return `<label style="display:flex; gap:10px; align-items:center; text-transform:none; letter-spacing:0; font-weight:500; margin:6px 0; color:${has ? 'var(--text)' : 'var(--text-dim)'};">
-      <input type="checkbox" class="em-chk" value="${esc(i.code)}" style="width:auto;" ${has ? '' : 'disabled'} ${has && checked.has(i.code) ? 'checked' : ''}>
-      <span>${esc(i.name)} <span class="muted">(${esc(i.code)})</span> — ${has ? esc(i.contact_email) : '<i>no contact email</i>'}${i.status !== 'active' ? ' · <i>suspended</i>' : ''}</span>
+    return `<label style="display:flex; gap:10px; align-items:center; text-transform:none; letter-spacing:0; font-weight:500; margin:6px 0; color:var(--text);">
+      <input type="checkbox" class="em-chk" value="${esc(i.code)}" style="width:auto;" ${checked.has(i.code) ? 'checked' : ''}>
+      <span>${esc(i.name)} <span class="muted">(${esc(i.code)})</span> — ${has ? esc(i.contact_email) : '<i class="muted">no contact email · dashboard only</i>'}${i.status !== 'active' ? ' · <i>suspended</i>' : ''}</span>
     </label>`; }).join('') : '<p class="muted">No institutes.</p>';
 }
 async function loadEmailLog(){
@@ -954,7 +956,7 @@ async function loadEmailLog(){
     if (handleAuthError(r)) return;
     if (!r || !r.ok || !r.rows.length){ $('em-log').innerHTML = '<p class="muted">No emails sent yet.</p>'; return; }
     $('em-log').innerHTML = r.rows.map(x => `<div class="muted" style="font-size:13px; margin:4px 0;">
-      ${esc(new Date(x.sent_at).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }))} · <b style="color:var(--text);">${esc(x.subject)}</b> · ${x.sent ?? 0}/${x.recipients} sent${x.failed ? ` · ${x.failed} failed` : ''}</div>`).join('');
+      ${esc(new Date(x.sent_at).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }))} · <b style="color:var(--text);">${esc(x.subject)}</b> · ${x.sent ?? 0}/${x.recipients} emailed${x.posted ? ` · ${x.posted} in dashboards` : ''}${x.failed ? ` · ${x.failed} failed` : ''}</div>`).join('');
   }catch(_e){ $('em-log').innerHTML = '<p class="muted">Unable to load.</p>'; }
 }
 $('email-box').addEventListener('toggle', () => {
@@ -978,16 +980,17 @@ $('btn-em-send').addEventListener('click', async () => {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/platform-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
-      body: JSON.stringify({ username: sa.u, password: sa.p, codes, subject, message })
+      body: JSON.stringify({ username: sa.u, password: sa.p, codes, subject, message, show_in_dashboard: $('em-dash').checked })
     });
     const r = await res.json();
     if (r && (r.error === 'invalid' || r.error === 'locked')){ handleAuthError(r); return; }
     if (!r || !r.ok){ errEl.textContent = (r && r.error && r.error !== 'server_error') ? r.error : 'Unable to send the email. Please try again.'; return; }
     const parts = [`<b>${r.sent}</b> email(s) sent.`];
+    if (r.posted) parts.push(`<b>${r.posted}</b> dashboard message(s) posted.`);
     if (r.failed && r.failed.length) parts.push(`Failed: ${r.failed.map(f => esc(f.name)).join(', ')}.`);
-    if (r.missing && r.missing.length) parts.push(`Skipped (no contact email): ${r.missing.map(m => esc(m.name)).join(', ')}.`);
+    if (r.missing && r.missing.length) parts.push(`No email sent (no contact email): ${r.missing.map(m => esc(m.name)).join(', ')}${r.posted ? ' — they received the dashboard message' : ''}.`);
     $('em-result').innerHTML = `<p class="muted" style="color:var(--text);">${parts.join(' ')}</p>`;
-    if (r.sent){ toast(`${r.sent} email(s) sent.`, 'ok'); $('em-subject').value = ''; $('em-message').value = ''; }
+    if (r.sent || r.posted){ toast('Message sent.', 'ok'); $('em-subject').value = ''; $('em-message').value = ''; }
     loadEmailLog();
   }catch(_e){ errEl.textContent = 'Connection error. Please try again.'; }
   finally{ btn.disabled = false; btn.textContent = 'Send email'; }
