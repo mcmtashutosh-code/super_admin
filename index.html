@@ -917,6 +917,7 @@ function renderList(){
                 <option value="renew">After the current plan ends (renewal)</option>
               </select></div>
           </div>
+          <div class="muted" data-f="planpreview" style="font-size:13px; margin-top:8px;"></div>
           <div class="btn-row"><button class="btn btn-primary" data-act="applyplan">✅ Apply plan</button></div>
           <div class="err" data-f="planerr"></div>
           <label style="margin-top:16px;">Subscription</label>
@@ -952,6 +953,42 @@ $('inst-list').addEventListener('input', (e) => {
     card.querySelector('[data-f="color_warn"]').textContent = colorWarning(e.target.value);
     card.querySelector('[data-f="color_on"]').checked = true;
   }
+});
+
+/* Apply a plan: one calculation used for the live preview and for Apply */
+function planCalc(inst, card){
+  const p = PLAN_PRESETS[card.querySelector('[data-f="preset"]').value];
+  const months = Number(card.querySelector('[data-f="months"]').value);
+  const mode = card.querySelector('[data-f="startmode"]').value;
+  let start = istToday(), err = '';
+  if (mode === 'renew'){
+    if (!inst.plan_expires_at || inst.expired){ err = 'This institute has no running plan; choose "From today".'; }
+    else start = addDaysYMD(ymdFromIso(inst.plan_expires_at), 1);
+  }
+  const lastDay = p.days ? addDaysYMD(start, p.days - 1) : addDaysYMD(addMonthsYMD(start, months), -1);
+  const price = p.prices ? p.prices[months] : 0;
+  const durationText = p.days ? `${p.days} days` : `${months} month${months > 1 ? 's' : ''}`;
+  return { p, months, start, lastDay, price, durationText, err };
+}
+// Choosing a plan, duration or start fills the Subscription and Live-test fields straight away
+function fillPlanFields(inst, card){
+  const c = planCalc(inst, card);
+  const monthsSel = card.querySelector('[data-f="months"]');
+  monthsSel.disabled = !!c.p.days;
+  const prev = card.querySelector('[data-f="planpreview"]');
+  card.querySelector('[data-f="planerr"]').textContent = c.err;
+  if (c.err){ prev.textContent = ''; return; }
+  card.querySelector('[data-f="plan"]').value = c.p.plan;
+  card.querySelector('[data-f="expires"]').value = ymdStr(c.lastDay);
+  card.querySelector('[data-f="tests"]').value = c.p.tests;
+  card.querySelector('[data-f="anchor"]').value = ymdStr(c.start);
+  prev.innerHTML = `<b style="color:var(--text);">${esc(c.p.plan)}</b> · ${esc(c.durationText)} · valid <b style="color:var(--text);">${fmtDate(ymdStr(c.start))} – ${fmtDate(ymdStr(c.lastDay))}</b> · up to ${c.p.students} students · ${c.p.tests} live test${c.p.tests === 1 ? '' : 's'}/month · ${c.price ? '₹' + c.price.toLocaleString('en-IN') : 'Free'}`
+    + '<br><span style="font-size:12px;">The fields below are filled in. Press <b>Apply plan</b> to save everything together.</span>';
+}
+$('inst-list').addEventListener('change', (e) => {
+  const sel = e.target.closest('select[data-f="preset"], select[data-f="months"], select[data-f="startmode"]'); if (!sel) return;
+  const card = sel.closest('.card'); const inst = institutes[Number(card.dataset.idx)]; if (!inst) return;
+  fillPlanFields(inst, card);
 });
 
 $('inst-list').addEventListener('click', async (e) => {
@@ -1038,19 +1075,10 @@ $('inst-list').addEventListener('click', async (e) => {
 
   if (act === 'applyplan'){
     const errEl = card.querySelector('[data-f="planerr"]'); errEl.textContent = '';
-    const key = card.querySelector('[data-f="preset"]').value;
-    const p = PLAN_PRESETS[key];
-    const months = Number(card.querySelector('[data-f="months"]').value);
-    const mode = card.querySelector('[data-f="startmode"]').value;
-    let start = istToday();
-    if (mode === 'renew'){
-      if (!inst.plan_expires_at || inst.expired){ errEl.textContent = 'This institute has no running plan; choose "From today".'; return; }
-      start = addDaysYMD(ymdFromIso(inst.plan_expires_at), 1);
-    }
-    const lastDay = p.days ? addDaysYMD(start, p.days - 1) : addDaysYMD(addMonthsYMD(start, months), -1);
+    const c = planCalc(inst, card);
+    if (c.err){ errEl.textContent = c.err; return; }
+    const { p, start, lastDay, price, durationText } = c;
     const expiresIso = new Date(ymdStr(lastDay) + 'T23:59:59+05:30').toISOString();
-    const price = p.prices ? p.prices[months] : 0;
-    const durationText = p.days ? `${p.days} days` : `${months} month${months > 1 ? 's' : ''}`;
     if ((inst.students || 0) > p.students &&
         !confirm(`Note: ${inst.name} already has ${inst.students} students, more than this plan's limit of ${p.students}. Existing students keep access, but no new students can register. Continue?`)) return;
     if (!confirm(`Apply this plan to "${inst.name}"?\n\nPlan: ${p.plan} (${durationText})\nStudents: up to ${p.students}\nLive tests: ${p.tests} per month\nValid: ${fmtDate(ymdStr(start))} to ${fmtDate(ymdStr(lastDay))}\nPrice: ${price ? '₹' + price.toLocaleString('en-IN') : 'Free'}`)) return;
