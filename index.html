@@ -290,6 +290,41 @@
     </div>
 
     <div class="card">
+      <details id="rp-box">
+        <summary>💳 Record payment / recharge</summary>
+        <p class="muted" style="margin:10px 0 0; font-size:13px;">Record a payment received from an institute. The plan you choose becomes the institute's plan, and its access is extended. Revenue figures are not shown here.</p>
+        <div id="rp-noplans" class="hidden"><p class="err" style="margin-top:10px;">No plans yet. Plans are created in 💰 Revenue → Plans &amp; pricing (revenue PIN required).</p></div>
+        <div id="rp-form">
+          <label>Institute</label><select class="sel" id="rp-inst" style="width:100%;"></select>
+          <label>Plan</label><select class="sel" id="rp-plan" style="width:100%;"></select>
+          <div class="grid">
+            <div><label>Amount (₹)</label><input id="rp-amount" type="number" min="0" step="0.01"></div>
+            <div><label>Period</label>
+              <select class="sel" id="rp-months" style="width:100%;">
+                <option value="1">1 month</option><option value="3">3 months (quarterly)</option>
+                <option value="6">6 months (half-yearly)</option><option value="12">12 months (yearly)</option>
+              </select></div>
+            <div><label>Payment date</label><input id="rp-date" type="date"></div>
+            <div><label>Method</label>
+              <select class="sel" id="rp-method" style="width:100%;">
+                <option>UPI</option><option>Bank transfer</option><option>Cash</option><option>Cheque</option><option>Card</option><option>Payment gateway</option><option>Other</option>
+              </select></div>
+          </div>
+          <p class="muted" id="rp-hint" style="font-size:12px; margin:6px 0 0;"></p>
+          <label id="rp-ref-label">Reference</label><input id="rp-ref">
+          <label id="rp-note-label">Note</label><input id="rp-note">
+          <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);">
+            <input type="checkbox" id="rp-extend" style="width:auto;" checked> Extend the institute's access by this period</label>
+          <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text); margin-top:4px;">
+            <input type="checkbox" id="rp-apply" style="width:auto;" checked> Apply the plan's live-test limit</label>
+          <div class="err" id="rp-err"></div>
+          <button class="btn btn-primary" id="btn-rp-save" style="margin-top:6px;">Save payment</button>
+          <div id="rp-ok"></div>
+        </div>
+      </details>
+    </div>
+
+    <div class="card">
       <details id="email-box">
         <summary>✉️ Email institutes</summary>
         <p class="muted" style="margin:10px 0 0;">Emails are sent from the platform Gmail account to each institute's contact email. Every institute receives its own copy.</p>
@@ -432,7 +467,8 @@
           <div class="report-wrap" id="rev-status"></div>
           <div class="grid" style="margin-top:8px;">
             <div class="card" style="margin-top:10px;">
-              <b>🏷 Institute plan and price</b>
+              <b>🏷 Change plan or special price (optional)</b>
+              <p class="muted" style="font-size:12px; margin:6px 0 0;">The plan is set automatically when you record a payment. Use this only to change a plan in advance or to give a special (discounted) price.</p>
               <label>Institute</label><select class="sel" id="ip-inst" style="width:100%;"></select>
               <label>Plan</label><select class="sel" id="ip-plan" style="width:100%;"></select>
               <label>Special price (₹, blank = plan price)</label><input id="ip-price" type="number" min="0" step="0.01">
@@ -482,6 +518,7 @@
             <div class="card" style="margin-top:10px;">
               <b>➕ Record a payment / recharge</b>
               <label>Institute</label><select class="sel" id="pay-inst" style="width:100%;"></select>
+              <label>Plan</label><select class="sel" id="pay-plan" style="width:100%;"></select>
               <div class="grid">
                 <div><label>Amount (₹)</label><input id="pay-amount" type="number" min="0" step="0.01"></div>
                 <div><label>Period</label>
@@ -834,6 +871,7 @@ function renderList(){
         <button class="btn" data-act="edit">✏️ Edit details</button>
         <button class="btn" data-act="reset">🔑 Reset admin password</button>
         <button class="btn" data-act="email">✉️ Email</button>
+        <button class="btn" data-act="recpay">💳 Record payment</button>
         ${i.code === 'VIDYAPATH' ? '' : '<button class="btn" data-act="regen">🔄 Regenerate link</button>'}
         ${i.code === 'VIDYAPATH' ? '' : (i.status === 'active'
           ? '<button class="btn btn-danger" data-act="suspend">⏸ Suspend</button>'
@@ -928,6 +966,13 @@ $('inst-list').addEventListener('click', async (e) => {
     return;
   }
   if (act === 'edit'){ card.querySelector('.edit-box').classList.toggle('hidden'); return; }
+
+  if (act === 'recpay'){
+    $('rp-box').open = true;
+    await openRecordPayment(inst.code);
+    $('rp-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
 
   if (act === 'email'){
     renderEmailList([inst.code]);
@@ -1207,6 +1252,107 @@ $('btn-refresh-all').addEventListener('click', async () => {
   finally{ b.disabled = false; b.textContent = '🔄 Refresh'; }
 });
 
+/* ---------------- RECORD PAYMENT (no revenue PIN; shows no revenue figures) ---------------- */
+let rpPlans = [], rpInstPlans = {}, rpKey = null, rpSaving = false;
+async function openRecordPayment(code){
+  $('rp-err').textContent = ''; $('rp-ok').innerHTML = '';
+  try{
+    const r = await rpc('sa_web_active_plans', creds());
+    if (handleAuthError(r)) return;
+    rpPlans = (r && r.ok && r.plans) || []; rpInstPlans = (r && r.institute_plans) || {};
+  }catch(_e){ rpPlans = []; }
+  $('rp-noplans').classList.toggle('hidden', rpPlans.length > 0);
+  $('rp-form').classList.toggle('hidden', rpPlans.length === 0);
+  $('rp-inst').innerHTML = institutes.map(i => `<option value="${esc(i.code)}">${esc(i.name)} (${esc(i.code)})</option>`).join('');
+  $('rp-plan').innerHTML = '<option value="">— Choose a plan —</option>' + rpPlans.map(p =>
+    `<option value="${p.id}">${esc(p.name)} · ${inr(p.price)} / ${PERIOD_NAME[p.period_months].toLowerCase()}${p.tests_per_cycle !== null && p.tests_per_cycle !== undefined ? ' · ' + p.tests_per_cycle + ' live tests' : ''}</option>`).join('');
+  if (code) $('rp-inst').value = code;
+  if (!$('rp-date').value) $('rp-date').value = isoToday();
+  rpKey = newPayKey();
+  rpPrefillPlan(); rpRefHint();
+}
+function rpPrefillPlan(){
+  const ip = rpInstPlans[$('rp-inst').value] || {};
+  $('rp-plan').value = ip.plan_id && rpPlans.some(p => p.id === ip.plan_id) ? String(ip.plan_id) : '';
+  rpPrefillAmount(ip.custom_price);
+}
+let rpBase = null;   // price per plan period used for the amount (special price or plan price)
+function rpExpected(){
+  const p = rpPlans.find(x => String(x.id) === $('rp-plan').value);
+  if (!p || rpBase === null) return null;
+  return Math.round(Number(rpBase) / p.period_months * Number($('rp-months').value) * 100) / 100;
+}
+function rpUpdateHint(){
+  const p = rpPlans.find(x => String(x.id) === $('rp-plan').value);
+  if (!p){ $('rp-hint').textContent = ''; return; }
+  const planAmt = Math.round(Number(p.price) / p.period_months * Number($('rp-months').value) * 100) / 100;
+  const amt = Number($('rp-amount').value || 0);
+  $('rp-hint').textContent = amt && Math.abs(amt - planAmt) >= 0.01
+    ? `Plan price for this period is ${inr(planAmt)}. A different amount is saved as this institute's special price (${inr(amt * p.period_months / Number($('rp-months').value))} per ${p.period_months === 1 ? 'month' : p.period_months + ' months'}).`
+    : `Plan price for this period: ${inr(planAmt)}.`;
+}
+function rpPrefillAmount(customPrice){
+  const p = rpPlans.find(x => String(x.id) === $('rp-plan').value);
+  if (!p){ $('rp-amount').value = ''; rpBase = null; rpUpdateHint(); return; }
+  rpBase = (customPrice !== null && customPrice !== undefined) ? customPrice : p.price;
+  $('rp-months').value = String(p.period_months);
+  $('rp-amount').value = rpExpected();
+  rpUpdateHint();
+}
+$('rp-months').addEventListener('change', () => { const e = rpExpected(); if (e !== null) $('rp-amount').value = e; rpUpdateHint(); });
+$('rp-amount').addEventListener('input', rpUpdateHint);
+function rpRefHint(){ $('rp-ref-label').textContent = REF_RULE[$('rp-method').value] || 'Reference'; $('rp-note-label').textContent = $('rp-method').value === 'Other' ? 'Note (required: describe the method)' : 'Note'; }
+$('rp-inst').addEventListener('change', rpPrefillPlan);
+$('rp-plan').addEventListener('change', () => { const ip = rpInstPlans[$('rp-inst').value] || {}; rpPrefillAmount($('rp-plan').value === String(ip.plan_id) ? ip.custom_price : null); });
+$('rp-method').addEventListener('change', rpRefHint);
+$('rp-box').addEventListener('toggle', () => { if ($('rp-box').open) openRecordPayment(null); });
+
+$('btn-rp-save').addEventListener('click', async () => {
+  if (rpSaving) return;
+  const errEl = $('rp-err'); errEl.textContent = ''; $('rp-ok').innerHTML = '';
+  const code = $('rp-inst').value, planId = $('rp-plan').value, amount = $('rp-amount').value, date = $('rp-date').value;
+  const method = $('rp-method').value, ref = $('rp-ref').value.trim(), note = $('rp-note').value.trim(), months = Number($('rp-months').value);
+  if (!code){ errEl.textContent = 'Please choose an institute.'; return; }
+  if (!planId){ errEl.textContent = 'Please choose a plan.'; return; }
+  if (amount === '' || !(Number(amount) > 0)){ errEl.textContent = 'Invalid payment amount.'; return; }
+  if (!date){ errEl.textContent = 'Please enter the payment date.'; return; }
+  if (/required/.test(REF_RULE[method] || '') && !ref){ errEl.textContent = `${REF_RULE[method].replace(' (required)', '')} is required.`; return; }
+  if (method === 'Other' && !note){ errEl.textContent = 'Please add a note describing the payment method.'; return; }
+  const inst = institutes.find(i => i.code === code) || {};
+  const plan = rpPlans.find(p => String(p.id) === planId) || {};
+  const isMain = code === 'VIDYAPATH';
+  const extend = $('rp-extend').checked && !isMain;
+  const until = extend ? estimateAccessUntil({ account_type: 'customer', paid_until: inst.plan_expires_at }, date, months) : null;
+  const row = (k, v) => `<tr><td class="muted" style="padding:4px 10px 4px 0;">${k}</td><td style="padding:4px 0;"><b>${v}</b></td></tr>`;
+  const ok = await confirmDialog(`<b style="font-size:16px;">You are recording</b>
+    <table style="margin-top:10px; font-size:14px;">
+      ${row('Institute', esc((inst.name || code) + ' (' + code + ')'))}
+      ${row('Plan', esc(plan.name || '—') + (inst.plan && inst.plan !== plan.name ? ` <span class="muted">(was ${esc(inst.plan)})</span>` : ''))}
+      ${row('Amount', inr(amount))}
+      ${row('Billing period', esc($('rp-months').selectedOptions[0].text))}
+      ${row('Payment date', dmy(date))}
+      ${row('Method', esc(method) + (ref ? ' · ' + esc(ref) : ''))}
+      ${row('Access until', extend ? dmy(until) : (isMain ? 'Not changed (main institute)' : 'Not changed'))}
+    </table>`);
+  if (!ok) return;
+  rpSaving = true;
+  const b = $('btn-rp-save'); b.disabled = true; b.textContent = 'Saving...';
+  try{
+    const r = await rpc('sa_web_record_payment', { ...creds(), p_code: code, p_plan_id: Number(planId), p_amount: Number(amount),
+      p_paid_on: date, p_period_months: months, p_method: method, p_reference: ref, p_note: note,
+      p_extend_access: $('rp-extend').checked, p_apply_plan_limits: $('rp-apply').checked, p_client_key: rpKey });
+    if (handleAuthError(r)) return;
+    if (r && r.ok){
+      $('rp-ok').innerHTML = `<div class="card" style="margin:10px 0 0; border-color:var(--accent);"><b>✅ Payment recorded successfully.</b>
+        <div class="muted" style="margin-top:6px; font-size:13px;">Payment ID #${r.id} · ${esc(r.institute)} · ${inr(r.amount)} · ${esc(r.plan || '—')}${r.access_until ? ' · new paid until ' + dmy(r.access_until) : ''}${r.duplicate ? ' · (already saved earlier)' : ''}</div></div>`;
+      rpKey = newPayKey(); $('rp-ref').value = ''; $('rp-note').value = '';
+      await loadList();
+      const again = await rpc('sa_web_active_plans', creds()); if (again && again.ok) rpInstPlans = again.institute_plans || {};
+    } else errEl.textContent = (r && r.error) || 'Payment could not be saved.';
+  }catch(_e){ errEl.textContent = 'Connection error. Payment could not be saved; you can safely try again.'; }
+  finally{ rpSaving = false; b.disabled = false; b.textContent = 'Save payment'; }
+});
+
 /* ---------------- EMAIL INSTITUTES ---------------- */
 function renderEmailList(checkedCodes){
   const checked = new Set(checkedCodes || []);
@@ -1467,7 +1613,7 @@ function renderRevenue(){
     revPlans.map(p => `<tr><td>${esc(p.name)}</td><td class="num"><b>${inr(p.price)}</b></td><td>${PERIOD_NAME[p.period_months]}</td>
       <td class="num">${inr(Number(p.price) / p.period_months)}</td><td>${p.tests_per_cycle ?? 'Unlimited'}</td><td>${p.institutes}</td>
       <td>${p.is_active ? 'Active' : 'Inactive'}</td><td><button class="btn plan-edit" data-id="${p.id}" style="padding:4px 9px;">✏️ Edit</button></td></tr>`).join('') + '</tbody></table>'
-    : '<p class="muted">No plans configured. Add your first plan below.</p>';
+    : '<p class="muted">No plans yet. Create your first plan below, for example: Arambh · ₹500 · Monthly · 4 live tests.</p>';
 
   $('rev-payments').innerHTML = r.payments.length ? `<table class="report"><thead><tr><th>ID</th><th>Date</th><th>Institute</th><th class="num">Amount</th><th>Plan / period</th><th>Access covered</th><th>Method</th><th>Reference</th><th>Status</th><th></th></tr></thead><tbody>` +
     r.payments.map(p => {
@@ -1497,9 +1643,25 @@ function statusOf(code){ return revData ? revData.status.find(s => s.code === co
 function prefillPayment(){
   const s = statusOf($('pay-inst').value);
   if (!s) return;
+  const act = revPlans.filter(p => p.is_active);
+  $('pay-plan').innerHTML = '<option value="">— Choose a plan —</option>' + act.map(p => `<option value="${p.id}">${esc(p.name)} · ${inr(p.price)} / ${PERIOD_NAME[p.period_months].toLowerCase()}</option>`).join('');
+  $('pay-plan').value = s.plan_id && act.some(p => p.id === s.plan_id) ? String(s.plan_id) : '';
   $('pay-amount').value = (s.price !== null && s.price !== undefined) ? s.price : '';
   if (s.period_months) $('pay-months').value = String(s.period_months);
 }
+$('pay-plan').addEventListener('change', () => {
+  const s = statusOf($('pay-inst').value), p = revPlans.find(x => String(x.id) === $('pay-plan').value);
+  if (!p) return;
+  $('pay-amount').value = (s && String(s.plan_id) === $('pay-plan').value && s.custom_price !== null && s.custom_price !== undefined) ? s.custom_price : p.price;
+  $('pay-months').value = String(p.period_months);
+});
+// Changing the period recalculates the amount (plan price or special price, per period)
+$('pay-months').addEventListener('change', () => {
+  const s = statusOf($('pay-inst').value), p = revPlans.find(x => String(x.id) === $('pay-plan').value);
+  if (!p) return;
+  const base = (s && String(s.plan_id) === $('pay-plan').value && s.custom_price !== null && s.custom_price !== undefined) ? Number(s.custom_price) : Number(p.price);
+  $('pay-amount').value = Math.round(base / p.period_months * Number($('pay-months').value) * 100) / 100;
+});
 function prefillInstPlan(){
   const s = statusOf($('ip-inst').value);
   if (!s) return;
@@ -1557,18 +1719,20 @@ $('btn-pay-save').addEventListener('click', async () => {
   const method = $('pay-method').value, ref = $('pay-ref').value.trim(), note = $('pay-note').value.trim();
   const months = Number($('pay-months').value);
   if (!code){ errEl.textContent = 'Please choose an institute.'; return; }
+  if (!$('pay-plan').value && !(statusOf(code) || {}).plan_id){ errEl.textContent = 'Please choose a plan.'; return; }
   if (amount === '' || !(Number(amount) > 0)){ errEl.textContent = 'Invalid payment amount.'; return; }
   if (!date){ errEl.textContent = 'Please enter the payment date.'; return; }
   if (/required/.test(REF_RULE[method] || '') && !ref){ errEl.textContent = `${REF_RULE[method].replace(' (required)', '')} is required.`; return; }
   if (method === 'Other' && !note){ errEl.textContent = 'Please add a note describing the payment method.'; return; }
   const s = statusOf(code);
+  const chosenPlan = revPlans.find(p => String(p.id) === $('pay-plan').value);
   const extend = $('pay-extend').checked && s && s.account_type !== 'main';
   const until = extend ? estimateAccessUntil(s, date, months) : null;
   const row = (k, v) => `<tr><td class="muted" style="padding:4px 10px 4px 0;">${k}</td><td style="padding:4px 0;"><b>${v}</b></td></tr>`;
   const ok = await confirmDialog(`<b style="font-size:16px;">You are recording</b>
     <table style="margin-top:10px; font-size:14px;">
       ${row('Institute', esc(s ? s.name + ' (' + s.code + ')' : code))}
-      ${row('Plan', esc((s && s.plan) || '—'))}
+      ${row('Plan', esc(chosenPlan ? chosenPlan.name : ((s && s.plan) || '—')) + (chosenPlan && s && s.plan && s.plan !== chosenPlan.name ? ` <span class="muted">(was ${esc(s.plan)})</span>` : ''))}
       ${row('Amount', inr(amount))}
       ${row('Billing period', esc($('pay-months').selectedOptions[0].text))}
       ${row('Payment date', dmy(date))}
@@ -1581,7 +1745,8 @@ $('btn-pay-save').addEventListener('click', async () => {
   try{
     const r = await rpc('sa_web_payment_add', { ...revCreds(), p_code: code, p_amount: Number(amount), p_paid_on: date,
       p_period_months: months, p_method: method, p_reference: ref, p_note: note,
-      p_extend_access: $('pay-extend').checked, p_apply_plan_limits: $('pay-apply').checked, p_client_key: payKey });
+      p_extend_access: $('pay-extend').checked, p_apply_plan_limits: $('pay-apply').checked, p_client_key: payKey,
+      p_plan_id: $('pay-plan').value ? Number($('pay-plan').value) : null });
     if (revAuthFail(r)) return;
     if (r && r.ok){
       $('pay-ok').innerHTML = `<div class="card" style="margin:10px 0 0; border-color:var(--accent);"><b>✅ Payment recorded successfully.</b>
