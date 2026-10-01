@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Verify payment receipt — Vidyapath CBT</title>
+<style>
+  :root{ --ink:#1b2a41; --dim:#6b7686; --line:#e3e7ee; --teal:#16a085; --bg:#f4f6f9; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:Arial, Helvetica, sans-serif; background:var(--bg); color:var(--ink); }
+  .wrap{ max-width:720px; margin:24px auto; padding:0 14px; }
+  .card{ background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .head{ background:#11203a; color:#fff; padding:18px 22px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start; }
+  .head h1{ margin:0; font-size:20px; } .head .t{ color:#5dcaa5; font-weight:700; letter-spacing:.04em; text-align:right; }
+  .head .no{ font-size:13px; text-align:right; margin-top:4px; }
+  .banner{ padding:14px 22px; font-weight:700; display:flex; gap:10px; align-items:center; }
+  .ok{ background:#e8f7f2; color:#0f7a62; border-bottom:1px solid #bfe8dc; }
+  .warn{ background:#fdf3e2; color:#9a6200; border-bottom:1px solid #f3dcae; }
+  .bad{ background:#fdecea; color:#b03224; border-bottom:1px solid #f4c7c1; }
+  .body{ padding:18px 22px; }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .lbl{ font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
+  .val{ font-size:15px; }
+  table{ width:100%; border-collapse:collapse; margin-top:18px; font-size:14px; }
+  th{ text-align:left; background:#f1f4f8; color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.06em; padding:9px 10px; }
+  td{ padding:12px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .r{ text-align:right; }
+  .total{ font-size:20px; font-weight:700; color:var(--teal); }
+  .validity{ margin-top:16px; border:1px solid #9fdcc9; background:#e8f7f2; border-radius:8px; padding:12px 14px; }
+  .foot{ padding:14px 22px; border-top:1px solid var(--line); font-size:12px; color:var(--dim); display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .btn{ background:var(--teal); color:#fff; border:0; border-radius:8px; padding:10px 16px; font:inherit; font-weight:600; cursor:pointer; }
+  .msg{ text-align:center; padding:40px 22px; }
+  .msg h2{ margin:0 0 8px; }
+  form{ display:grid; gap:10px; max-width:380px; margin:18px auto 0; text-align:left; }
+  input{ padding:10px 12px; border:1px solid var(--line); border-radius:8px; font:inherit; }
+  @media (max-width:560px){ .grid{ grid-template-columns:1fr; } .head .t, .head .no{ text-align:left; } }
+  @media print{ body{ background:#fff; } .wrap{ margin:0; max-width:none; } .noprint{ display:none !important; } .card{ border:0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="out"><div class="msg"><p>Checking receipt…</p></div></div>
+  <p class="noprint" style="text-align:center; font-size:12px; color:var(--dim); margin-top:14px;">
+    This page checks the receipt directly against the platform's records.</p>
+</div>
+
+<script>
+const SUPABASE_URL = "https://iyzujwixwfydmkzmhrxo.supabase.co";
+const SUPABASE_KEY = "sb_publishable_4t1qso9eT9lNU_aGnS8hiQ_zX3EGBXd";
+
+const esc = v => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const dmy = d => { if (!d) return '—'; const x = new Date(d); return `${String(x.getDate()).padStart(2,'0')}-${String(x.getMonth()+1).padStart(2,'0')}-${x.getFullYear()}`; };
+const inr = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function askForm(note){
+  document.getElementById('out').innerHTML = `<div class="msg"><h2>Verify a payment receipt</h2>
+    <p style="color:var(--dim);">${note || 'Enter the receipt number and verification code printed on the receipt.'}</p>
+    <form id="f"><input id="no" placeholder="Receipt number, e.g. VCBT/2026-27/0001" required>
+      <input id="c" placeholder="Verification code" required>
+      <button class="btn" type="submit">Verify</button></form></div>`;
+  document.getElementById('f').addEventListener('submit', e => {
+    e.preventDefault();
+    const no = document.getElementById('no').value.trim(), c = document.getElementById('c').value.trim();
+    history.replaceState(null, '', `?no=${encodeURIComponent(no)}&c=${encodeURIComponent(c)}`);
+    check(no, c);
+  });
+}
+
+async function check(no, code){
+  document.getElementById('out').innerHTML = '<div class="msg"><p>Checking receipt…</p></div>';
+  let r = null;
+  try{
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_receipt`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+      body: JSON.stringify({ p_receipt_no: no, p_code: code })
+    });
+    r = await res.json();
+  }catch(e){
+    document.getElementById('out').innerHTML = '<div class="msg"><h2>Unable to check</h2><p>Please check your internet connection and try again.</p></div>';
+    return;
+  }
+  if (!r || !r.ok){
+    askForm('<b style="color:#b03224;">No receipt matches this number and code.</b> Please check both and try again. A receipt that cannot be verified here should not be accepted.');
+    return;
+  }
+  const iss = r.issuer || {};
+  const refunded = Number(r.refund_amount || 0) > 0;
+  const banner = r.status === 'cancelled'
+      ? `<div class="banner bad">✖ This receipt has been CANCELLED. The payment was voided and the receipt is no longer valid.</div>`
+    : r.status === 'refunded'
+      ? `<div class="banner warn">↺ Genuine receipt — the payment was fully REFUNDED${r.refund_date ? ' on ' + dmy(r.refund_date) : ''}.</div>`
+    : r.status === 'partially_refunded'
+      ? `<div class="banner warn">↺ Genuine receipt — ${inr(r.refund_amount)} was refunded${r.refund_date ? ' on ' + dmy(r.refund_date) : ''}.</div>`
+      : `<div class="banner ok">✔ Genuine receipt — verified against the records of ${esc(iss.name || 'Vidyapath CBT Platform')}.</div>`;
+  const months = r.period_months ? `${r.period_months} month${r.period_months > 1 ? 's' : ''}` : '';
+  document.getElementById('out').innerHTML = `
+    <div class="head">
+      <div><h1>${esc(iss.name || 'Vidyapath CBT Platform')}</h1>
+        <div style="font-size:12px; opacity:.85; margin-top:4px;">${esc([iss.address, iss.phone, iss.email].filter(Boolean).join(' · '))}${iss.gstin ? ' · GSTIN ' + esc(iss.gstin) : ''}</div></div>
+      <div><div class="t">PAYMENT RECEIPT</div><div class="no">${esc(r.receipt_no)}<br>Date: ${dmy(r.issued_at)}</div></div>
+    </div>
+    ${banner}
+    <div class="body">
+      <div class="grid">
+        <div><div class="lbl">Received from</div><div class="val"><b>${esc(r.institute && r.institute.name)}</b></div></div>
+        <div><div class="lbl">Payment details</div><div class="val">${dmy(r.paid_on)} · ${esc(r.method || '—')}${r.reference ? '<br><span style="font-size:13px; color:var(--dim);">Ref: ' + esc(r.reference) + '</span>' : ''}</div></div>
+      </div>
+      <table>
+        <tr><th>Description</th><th>Subscription period</th><th class="r">Amount</th></tr>
+        <tr><td><b>${esc(r.plan || 'Subscription')} plan</b><br><span style="font-size:12px; color:var(--dim);">Vidyapath CBT platform access${months ? ' · ' + months : ''}</span></td>
+            <td>${r.valid_from ? dmy(r.valid_from) + ' to ' + dmy(r.valid_until) : '—'}</td>
+            <td class="r"><b>${inr(r.amount)}</b></td></tr>
+        <tr><td></td><td class="r" style="color:var(--dim);">Total received</td><td class="r total">${inr(r.amount)}</td></tr>
+      </table>
+      ${r.valid_from ? `<div class="validity"><div class="lbl" style="color:#0f7a62;">Access validity</div>
+        <b>Valid from ${dmy(r.valid_from)} to ${dmy(r.valid_until)} (until 11:59 PM IST)</b></div>` : ''}
+    </div>
+    <div class="foot">
+      <span>${esc(iss.note || 'This is a computer-generated receipt and does not require a physical signature.')}</span>
+      <button class="btn noprint" onclick="window.print()">🖨 Print / Save as PDF</button>
+    </div>`;
+  document.title = `Receipt ${r.receipt_no} — ${iss.name || 'Vidyapath CBT'}`;
+}
+
+const q = new URLSearchParams(location.search);
+if (q.get('no') && q.get('c')) check(q.get('no'), q.get('c')); else askForm();
+</script>
+</body>
+</html>
