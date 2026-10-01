@@ -83,7 +83,13 @@
   .chart{ display:flex; align-items:flex-end; gap:6px; height:170px; overflow-x:auto; padding-top:18px; margin-top:8px; }
   .chart .col{ flex:1 0 38px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
   .chart .bar{ width:70%; min-height:2px; border-radius:5px 5px 0 0; background:var(--accent); }
-  .chart .bar.mrr{ background:#5dade2; } .chart .bar.none{ background:transparent; border:1px dashed var(--line-soft); height:30px; }
+  .chart .bar.mrr{ background:#5dade2; }
+  .chart .stack{ width:72%; display:flex; flex-direction:column-reverse; border-radius:5px 5px 0 0; overflow:hidden; }
+  .chart .seg{ display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; color:#06231e; overflow:hidden; }
+  .mchips{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .mchip{ background:transparent; border:1px solid var(--line-soft); color:var(--text-dim); border-radius:14px; padding:4px 10px; font:inherit; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  .mchip.on{ color:var(--text); border-color:var(--text-dim); }
+  .mchip i{ width:10px; height:10px; border-radius:3px; display:inline-block; } .chart .bar.none{ background:transparent; border:1px dashed var(--line-soft); height:30px; }
   .chart .v{ font-size:10.5px; color:var(--text-dim); margin-bottom:3px; white-space:nowrap; }
   .chart .l{ font-size:10.5px; color:var(--text-dim); margin-top:4px; white-space:nowrap; }
   .ren-buckets{ display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; margin:12px 0; }
@@ -441,7 +447,10 @@
           </div>
 
           <div class="grid" style="margin-top:6px;">
-            <div class="card" style="margin-top:10px;"><b>Cash collection</b><div class="chart" id="rev-cash-chart"></div></div>
+            <div class="card" style="margin-top:10px;"><b>Cash collection</b>
+              <div class="mchips" id="rev-cash-chips"></div>
+              <div class="chart" id="rev-cash-chart"></div>
+              <div class="muted" id="rev-cash-summary" style="font-size:12px; margin-top:8px;"></div></div>
             <div class="card" style="margin-top:10px;"><b>MRR</b><div class="chart" id="rev-mrr-chart"></div></div>
           </div>
 
@@ -1709,6 +1718,12 @@ async function loadRevenue(){
     if (!r || !r.ok){ toast((r && r.error) || 'Unable to load revenue.', 'err'); return; }
     if (!ov || !ov.ok){ toast((ov && ov.error) || 'Unable to load the overview.', 'err'); return; }
     revData = r; revPlans = (pl && pl.plans) || []; revOv = ov;
+    try{
+      const cbm = await rpc('sa_web_rev_cash_by_method', { ...revCreds(), p_from: from, p_to: to, p_view: $('rev-g').value,
+        p_inst_code: $('rev-f-inst').value || null, p_plan_id: $('rev-f-plan').value ? Number($('rev-f-plan').value) : null,
+        p_method: $('rev-f-method').value || null });
+      revCbm = (cbm && cbm.ok) ? cbm : null;
+    }catch(_e){ revCbm = null; }
     renderRevenue(); fillFilterOptions(); renderOverview();
   }catch(_e){ toast('Connection error.', 'err'); }
 }
@@ -2050,6 +2065,53 @@ function changeText(cur, prev, isMoney){
   return `<span class="${pct > 0 ? 'up' : 'down'}">${pct > 0 ? '↑' : '↓'} ${Math.abs(pct)}%</span> vs previous period`;
 }
 function setKpi(id, value, sub){ $(id).querySelector('b').innerHTML = value; $(id).querySelector('.kc').innerHTML = sub || ''; }
+/* Cash collection split by payment method: stacked bars, share % inside each part */
+let revCbm = null; const cashSel = new Set();      // empty = Total (all methods)
+const METHOD_COLOR = { 'UPI': '#16a085', 'Bank transfer': '#5dade2', 'Cash': '#f5b041', 'Cheque': '#c39bd3',
+                       'Card': '#e67e22', 'Payment gateway': '#48c9b0', 'Other': '#95a5a6', 'Unspecified': '#7f8c8d' };
+const pct1 = (a, t) => t > 0 ? (Math.round(a * 1000 / t) / 10) : 0;
+function renderCashByMethod(){
+  const d = revCbm, methods = d.methods || [];
+  [...cashSel].forEach(m => { if (!methods.includes(m)) cashSel.delete(m); });
+  const shown = cashSel.size ? methods.filter(m => cashSel.has(m)) : methods;
+  $('rev-cash-chips').innerHTML = methods.length ? `<button class="mchip ${cashSel.size ? '' : 'on'}" data-m="">Total</button>` +
+    methods.map(m => `<button class="mchip ${cashSel.has(m) ? 'on' : ''}" data-m="${esc(m)}"><i style="background:${METHOD_COLOR[m] || '#95a5a6'};"></i>${esc(m)}</button>`).join('') : '';
+  const el = $('rev-cash-chart');
+  const rows = d.buckets.map(b => {
+    const bm = b.by_method || {};
+    const full = methods.reduce((a, m) => a + Math.max(0, Number(bm[m] || 0)), 0);
+    const parts = shown.map(m => ({ m, v: Math.max(0, Number(bm[m] || 0)) })).filter(x => x.v > 0);
+    return { label: b.label, full, parts, vis: parts.reduce((a, x) => a + x.v, 0) };
+  });
+  const max = Math.max(0, ...rows.map(r => r.vis));
+  if (!rows.length || max <= 0){ el.innerHTML = '<p class="muted" style="margin:auto;">No payments found for the selected period.</p>'; }
+  else el.innerHTML = rows.map(r => {
+    const h = Math.round(r.vis * 120 / max);
+    const segs = r.parts.map(x => {
+      const sh = Math.max(2, Math.round(x.v * h / r.vis)), p = pct1(x.v, r.full);
+      return `<div class="seg" style="height:${sh}px; background:${METHOD_COLOR[x.m] || '#95a5a6'};" title="${esc(r.label)} · ${esc(x.m)}: ${inr(x.v)} (${p}% of ${inr(r.full)})">${sh >= 15 ? p + '%' : ''}</div>`;
+    }).join('');
+    return `<div class="col" title="${esc(r.label)}: ${inr(r.vis)}"><span class="v">${r.vis ? (r.vis >= 100000 ? '₹' + Math.round(r.vis / 1000) + 'k' : inr(r.vis).replace('.00', '')) : '—'}</span>
+      <div class="stack" style="height:${Math.max(2, h)}px;">${segs}</div><span class="l">${esc(r.label)}</span></div>`;
+  }).join('');
+  // Range summary: amount and share per method
+  const tot = {}; d.buckets.forEach(b => methods.forEach(m => { tot[m] = (tot[m] || 0) + Number((b.by_method || {})[m] || 0); }));
+  const grand = methods.reduce((a, m) => a + Math.max(0, tot[m]), 0);
+  $('rev-cash-summary').innerHTML = grand > 0 ? methods.filter(m => tot[m])
+    .sort((a, b) => tot[b] - tot[a])
+    .map(m => `<span style="white-space:nowrap;"><i style="display:inline-block; width:9px; height:9px; border-radius:2px; background:${METHOD_COLOR[m] || '#95a5a6'};"></i> ${esc(m)} <b style="color:var(--text);">${inr(tot[m])}</b> (${pct1(Math.max(0, tot[m]), grand)}%)</span>`).join(' · ') : '';
+}
+// Tap a part of a bar (useful on phones, where there is no hover) to see its amount and share
+$('rev-cash-chart').addEventListener('click', (e) => { const g = e.target.closest('.seg'); if (g) toast(g.title); });
+$('rev-cash-chips').addEventListener('click', (e) => {
+  const c = e.target.closest('.mchip'); if (!c || !revCbm) return;
+  const m = c.dataset.m;
+  if (!m) cashSel.clear();
+  else if (cashSel.has(m)) cashSel.delete(m); else cashSel.add(m);
+  if (cashSel.size === (revCbm.methods || []).length) cashSel.clear();   // all selected = Total
+  renderCashByMethod();
+});
+
 function barChart(el, rows, key, cls, emptyNote){
   const vals = rows.map(r => r[key]).filter(v => v !== null && v !== undefined).map(Number);
   if (!rows.length || !vals.length){ el.innerHTML = `<p class="muted" style="align-self:center; margin:auto;">${emptyNote}</p>`; return; }
@@ -2084,7 +2146,9 @@ function renderOverview(){
   setKpi('k-trial', k.trial_in_use ? k.trial : '—', k.trial_in_use ? 'in trial now' : 'Trials not in use');
   setKpi('k-out', inr(k.outstanding_amount), k.outstanding_count ? `${k.outstanding_count} account${k.outstanding_count === 1 ? '' : 's'} · oldest due ${dmy(k.oldest_due)}` : 'No overdue renewals');
 
-  barChart($('rev-cash-chart'), o.cash_trend, 'total', '', 'No payments found for the selected period.');
+  if (revCbm) renderCashByMethod();
+  else { $('rev-cash-chips').innerHTML = ''; $('rev-cash-summary').textContent = '';
+         barChart($('rev-cash-chart'), o.cash_trend, 'total', '', 'No payments found for the selected period.'); }
   if (o.mrr_trend === null || o.mrr_trend === undefined) $('rev-mrr-chart').innerHTML = '<p class="muted" style="margin:auto;">The MRR trend is platform-wide. Clear the institute and plan filters to see it.</p>';
   else barChart($('rev-mrr-chart'), o.mrr_trend, 'mrr', 'mrr', `No MRR history yet${o.mrr_since ? ' (tracking started ' + dmy(o.mrr_since) + ')' : ''}.`);
 
