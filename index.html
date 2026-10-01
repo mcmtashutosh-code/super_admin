@@ -882,7 +882,7 @@ async function loadList(){
     renderList();
   }catch(e){ $('inst-list').innerHTML = '<p class="muted">Connection error.</p>'; }
 }
-$('btn-refresh').addEventListener('click', loadList);
+$('btn-refresh').addEventListener('click', () => refreshAll());
 
 /* ---------------- PLAN PRESETS (Vidyapath CBT 1.0) ---------------- */
 const PLAN_PRESETS = {
@@ -1519,16 +1519,61 @@ $('btn-tk-status').addEventListener('click', async () => {
 });
 
 /* ---------------- SOFT REFRESH (keeps you signed in) ---------------- */
-$('btn-refresh-all').addEventListener('click', async () => {
+/* ---------------- NEW VERSION CHECK ----------------
+   "Refresh" reloads data only. When a new file is uploaded to GitHub, this
+   notices it (by APP_VERSION) and offers to load the new version. */
+const APP_VERSION = '2026-10-01.2';
+let updShown = false;
+async function checkForUpdate(){
+  try{
+    const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return false;
+    const m = (await res.text()).match(/const APP_VERSION = '([^']+)'/);
+    if (m && m[1] !== APP_VERSION){ showUpdateBanner(); return true; }
+  }catch(_e){}
+  return false;
+}
+function showUpdateBanner(){
+  if (updShown) return; updShown = true;
+  const d = document.createElement('div');
+  d.id = 'upd-banner';
+  d.style.cssText = 'position:fixed; left:50%; transform:translateX(-50%); top:max(10px, env(safe-area-inset-top, 0px)); z-index:9999; background:#11203a; color:#fff; border:1px solid #16a085; border-radius:12px; padding:10px 12px; display:flex; gap:10px; align-items:center; box-shadow:0 8px 24px rgba(0,0,0,.35); max-width:calc(100% - 20px); font-size:13.5px;';
+  d.innerHTML = '<span>🆕 A new version of this panel is available.</span>'
+    + '<button type="button" data-u="go" style="background:#16a085; color:#06231e; border:0; border-radius:8px; padding:7px 12px; font-weight:700; cursor:pointer;">Update now</button>'
+    + '<button type="button" data-u="later" style="background:transparent; color:#aab7b8; border:0; cursor:pointer;">Later</button>';
+  d.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-u]'); if (!b) return;
+    if (b.dataset.u === 'later'){ d.remove(); updShown = false; return; }
+    if (confirm('Load the new version now?\n\nYou will need to sign in again. Anything not yet saved on this screen will be lost.')){
+      location.replace(location.pathname + '?v=' + Date.now());
+    }
+  });
+  document.body.appendChild(d);
+}
+setInterval(checkForUpdate, 30 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkForUpdate(); });
+setTimeout(checkForUpdate, 5000);
+const nowTime = () => new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+// Refresh = reload the institutes AND whatever section is open (keeps you signed in)
+async function refreshAll(){
   const b = $('btn-refresh-all'); b.disabled = true; b.textContent = '🔄 Refreshing...';
   try{
-    await loadList();                                              // institutes, usage, support requests
+    await loadList();                                              // institutes, usage, support badge
     if ($('email-box').open) loadEmailLog();
     if ($('report-box').open && !$('report-out').querySelector('.muted')) $('btn-report').click();
-    toast('Refreshed.', 'ok');
+    if ($('support-box').open && !$('tk-thread-wrap').classList.contains('hidden') && tkCurrent) openTicket(tkCurrent);
+    if (typeof revPin !== 'undefined' && revPin && !$('rev-open').classList.contains('hidden')){
+      await loadRevenue();
+      const renPane = document.querySelector('.rev-pane[data-pane="ren"]');
+      if (renPane && !renPane.classList.contains('hidden')) loadRenewals();
+    }
+    const upd = await checkForUpdate();
+    toast(`Refreshed at ${nowTime()}.${upd ? ' A new version is available.' : ''}`, 'ok');
   }catch(_e){ toast('Unable to refresh. Please check your connection.', 'err'); }
   finally{ b.disabled = false; b.textContent = '🔄 Refresh'; }
-});
+}
+$('btn-refresh-all').addEventListener('click', refreshAll);
 
 /* ---------------- RECORD PAYMENT (no revenue PIN; shows no revenue figures) ---------------- */
 let rpPlans = [], rpInstPlans = {}, rpKey = null, rpSaving = false;
