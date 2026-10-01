@@ -55,7 +55,45 @@
   .btn-danger{ border-color:var(--danger); color:#ff8a7d; }
   .btn-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
   .err{ color:#ff8a7d; font-size:13px; min-height:18px; margin-top:8px; }
-  .stats{ display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px; }
+  .stats{ display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; margin-bottom:14px; }
+  .stats .stat{ padding:10px 12px; } .stats .stat b{ font-size:20px; }
+  .stat.warn b{ color:#f5b041; } .stat.bad b{ color:#ff8a7d; }
+  /* compact section toolbar */
+  .sec-bar{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px; margin-bottom:14px; }
+  .sec-btn{ background:var(--card); border:1px solid var(--line-soft); color:var(--text); border-radius:12px; padding:10px 12px;
+            font:inherit; font-size:13.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; text-align:left; }
+  .sec-btn:hover{ border-color:var(--line); } .sec-btn.on{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; }
+  .sec-btn .ic{ font-size:16px; } .sec-btn .newdot{ margin-left:auto; }
+  .sec-card > details > summary{ list-style:none; }
+  /* institute list */
+  .inst-tools{ display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; margin:18px 0 8px; }
+  .inst-tools h3{ font-size:16px; margin:0; }
+  .inst-ctrl{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+  .inst-ctrl input[type=search]{ flex:1 1 240px; }
+  .fchips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  .fchip{ background:transparent; border:1px solid var(--line-soft); color:var(--text-dim); border-radius:16px; padding:5px 11px; font:inherit; font-size:12.5px; cursor:pointer; }
+  .fchip.on{ background:var(--accent); border-color:var(--accent); color:#06231e; font-weight:700; }
+  .itable{ border:1px solid var(--line-soft); border-radius:12px; overflow:hidden; background:var(--card); }
+  .irow{ display:grid; grid-template-columns:minmax(170px, 2fr) 0.9fr 0.9fr 1.3fr 0.8fr minmax(170px, 1.5fr); gap:10px; align-items:center;
+         padding:10px 14px; border-top:1px solid var(--line-soft); cursor:pointer; font-size:13.5px; }
+  .irow:first-child{ border-top:0; } .irow:hover{ background:var(--field); } .irow.open{ background:var(--field); }
+  .irow.ihead{ cursor:default; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); background:transparent; }
+  .irow .nm{ font-weight:600; } .irow .sub{ font-size:11.5px; color:var(--text-dim); }
+  .irow .k{ display:none; }
+  .idetail{ padding:12px; border-top:1px solid var(--line-soft); background:var(--bg); }
+  .idetail .card{ margin-bottom:0; }
+  .pin{ color:#f5b041; margin-right:4px; }
+  .irow .pill{ white-space:nowrap; }
+  .pill.noexp{ background:#3498db33; color:#5dade2; }
+  @media (max-width:860px){
+    .stats{ grid-template-columns:repeat(3, 1fr); }
+    .irow.ihead{ display:none; }
+    .irow{ grid-template-columns:1fr 1fr; gap:3px 10px; }
+    .irow > div:nth-child(1){ grid-column:1 / 2; grid-row:1; } .irow > div:nth-child(6){ grid-column:2 / 3; grid-row:1; justify-self:end; }
+    .irow > div:nth-child(2), .irow > div:nth-child(3), .irow > div:nth-child(4), .irow > div:nth-child(5){ font-size:12px; color:var(--text); }
+    .irow .k{ display:inline; color:var(--text-dim); }
+  }
+  @media (max-width:520px){ .stats{ grid-template-columns:repeat(2, 1fr); } .sec-bar{ grid-template-columns:1fr 1fr; } }
   .stat{ background:var(--card); border:1px solid var(--line-soft); border-radius:12px; padding:12px; }
   .stat b{ display:block; font-family:Sora, sans-serif; font-size:22px; }
   .stat span{ color:var(--text-dim); font-size:12px; }
@@ -179,9 +217,13 @@
       <div class="stat"><b id="st-inst">–</b><span>Institutes</span></div>
       <div class="stat"><b id="st-active">–</b><span>Active</span></div>
       <div class="stat"><b id="st-students">–</b><span>Total students</span></div>
+      <div class="stat warn" title="Access ends within the 'expiring soon' window"><b id="st-expiring">–</b><span>Expiring soon</span></div>
+      <div class="stat bad"><b id="st-expired">–</b><span>Expired</span></div>
     </div>
 
-    <div class="card">
+    <div class="sec-bar" id="sec-bar"></div>
+
+    <div class="card sec-card hidden" id="portal-card">
       <label style="margin-top:0;">Student portal URL</label>
       <div style="display:flex; gap:8px;">
         <input id="in-portal-url" placeholder="e.g. https://yourname.github.io/portal/">
@@ -633,10 +675,34 @@
       </details>
     </div>
 
-    <div style="display:flex; justify-content:space-between; align-items:center; margin:22px 0 10px;">
-      <h3 style="font-size:16px;">Institutes</h3>
+    <div class="inst-tools">
+      <h3>Institutes <span class="muted" id="inst-count" style="font-size:13px; font-weight:400;"></span></h3>
       <button class="btn" id="btn-refresh">🔄 Refresh</button>
     </div>
+    <div class="inst-ctrl">
+      <input type="search" id="inst-q" placeholder="🔎 Search institute, code, admin, phone, email…" autocomplete="off">
+      <select class="sel" id="inst-sort" title="Sort by">
+        <option value="priority">Sort: Priority status</option>
+        <option value="default">Sort: Default (oldest first)</option>
+        <option value="st_expired">Sort: Expired first</option>
+        <option value="st_expiring">Sort: Expiring soon first</option>
+        <option value="st_active">Sort: Active first</option>
+        <option value="exp_near">Sort: Expiry date — nearest first</option>
+        <option value="exp_far">Sort: Expiry date — farthest first</option>
+        <option value="name_az">Sort: Name A → Z</option>
+        <option value="name_za">Sort: Name Z → A</option>
+        <option value="stu_high">Sort: Students — highest first</option>
+        <option value="stu_low">Sort: Students — lowest first</option>
+        <option value="plan">Sort: Plan</option>
+        <option value="created_new">Sort: Newest first</option>
+        <option value="created_old">Sort: Oldest first</option>
+      </select>
+      <label style="margin:0; text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:6px; align-items:center; color:var(--text); white-space:nowrap;">
+        <input type="checkbox" id="inst-pin" style="width:auto;" checked> ★ Pin Vidyapath</label>
+      <label style="margin:0; text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:6px; align-items:center; color:var(--text-dim); white-space:nowrap;" title="An institute is 'Expiring soon' when its access ends within this many days">
+        Expiring soon ≤ <input type="number" id="inst-soon" min="1" max="60" value="7" style="width:62px; padding:6px 8px;"> days</label>
+    </div>
+    <div class="fchips" id="inst-filters"></div>
     <div id="inst-list"><p class="muted">Loading...</p></div>
   </div>
 </div>
@@ -860,13 +926,8 @@ function quotaText(i){
   const total = q.limit + (q.extra || 0);
   return `${q.used} of ${total} used · ${q.remaining} left · cycle ends ${fmtDate(q.cycle_end)}`;
 }
-function renderList(){
-  $('st-inst').textContent = institutes.length;
-  $('st-active').textContent = institutes.filter(i => i.status === 'active').length;
-  $('st-students').textContent = institutes.reduce((a, i) => a + Number(i.students || 0), 0);
-
-  if (!institutes.length){ $('inst-list').innerHTML = '<p class="muted">No institutes found.</p>'; return; }
-  $('inst-list').innerHTML = institutes.map((i, idx) => `
+function instCardHtml(i, idx){
+  return `
     <div class="card" data-idx="${idx}">
       <div class="inst-head">
         ${i.logo_url ? `<img class="logo" src="${esc(i.logo_url)}" alt="" onerror="this.style.display='none'">` : ''}
@@ -969,8 +1030,172 @@ function renderList(){
           <div class="err" data-f="quotaerr"></div>
         </div>`}
       </div>
-    </div>`).join('');
+    </div>`;
 }
+
+
+/* ---------------- INSTITUTE LIST: compact rows, search, filters, sort ---------------- */
+const MAIN_CODE = 'VIDYAPATH';
+const instUI = { q: '', filter: 'all', sort: 'priority', pin: true, soon: 7, open: null, limit: 50 };
+try{
+  const saved = JSON.parse(localStorage.getItem('sa_inst_ui') || '{}');
+  ['sort', 'pin', 'soon'].forEach(k => { if (saved[k] !== undefined) instUI[k] = saved[k]; });
+}catch(_e){}
+function saveInstUI(){ try{ localStorage.setItem('sa_inst_ui', JSON.stringify({ sort: instUI.sort, pin: instUI.pin, soon: instUI.soon })); }catch(_e){} }
+function isMain(i){ return i.code === MAIN_CODE || i.account_type === 'main'; }
+// Status used by the list (from the same data the cards use)
+function instState(i){
+  if (i.status !== 'active') return 'suspended';
+  if (!i.plan_expires_at) return 'noexpiry';
+  if (i.expired) return 'expired';
+  if (i.days_left !== null && i.days_left !== undefined && i.days_left <= instUI.soon) return 'expiring';
+  return 'active';
+}
+function stateBadge(i){
+  const st = instState(i);
+  if (st === 'suspended') return '<span class="pill suspended">⚫ SUSPENDED</span>';
+  if (st === 'expired')   return '<span class="pill expired">🔴 EXPIRED</span>';
+  if (st === 'expiring')  return `<span class="pill warn">🟡 EXPIRING IN ${i.days_left} DAY${i.days_left === 1 ? '' : 'S'}</span>`;
+  if (st === 'noexpiry')  return '<span class="pill noexp">🔵 NO EXPIRY</span>';
+  return '<span class="pill active">🟢 ACTIVE</span>';
+}
+function accessShort(i){
+  const st = instState(i);
+  if (st === 'noexpiry') return 'No expiry';
+  if (st === 'expired') return `<span style="color:#ff8a7d;">Expired ${esc(dmyShort(i.plan_expires_at))}</span>`;
+  if (!i.plan_expires_at) return '—';
+  return `${esc(dmyShort(i.plan_expires_at))} <span class="sub">(${i.days_left}d)</span>`;
+}
+function dmyShort(d){ return d ? new Date(d).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : '—'; }
+const FILTERS = [['all', 'All'], ['active', 'Active'], ['expiring', 'Expiring soon'], ['expired', 'Expired'], ['suspended', 'Suspended'], ['noexpiry', 'No expiry']];
+function inFilter(i, f){
+  const st = instState(i);
+  if (f === 'all') return true;
+  if (f === 'active') return i.status === 'active' && !i.expired;      // includes expiring soon and no expiry
+  return st === f;
+}
+const PRIORITY = { expired: 1, expiring: 2, active: 3, noexpiry: 4, suspended: 5 };
+const expTime = i => i.plan_expires_at ? new Date(i.plan_expires_at).getTime() : Infinity;
+function sortList(list){
+  const by = {
+    priority:    (a, b) => (PRIORITY[instState(a)] - PRIORITY[instState(b)]) || (expTime(a) - expTime(b)) || a.name.localeCompare(b.name),
+    default:     (a, b) => 0,
+    st_expired:  (a, b) => ((instState(b) === 'expired') - (instState(a) === 'expired')) || (expTime(a) - expTime(b)),
+    st_expiring: (a, b) => ((instState(b) === 'expiring') - (instState(a) === 'expiring')) || (expTime(a) - expTime(b)),
+    st_active:   (a, b) => ((['active', 'noexpiry'].includes(instState(b))) - (['active', 'noexpiry'].includes(instState(a)))) || a.name.localeCompare(b.name),
+    exp_near:    (a, b) => expTime(a) - expTime(b),
+    exp_far:     (a, b) => { const x = a.plan_expires_at ? expTime(a) : -Infinity, y = b.plan_expires_at ? expTime(b) : -Infinity; return y - x; },
+    name_az:     (a, b) => a.name.localeCompare(b.name),
+    name_za:     (a, b) => b.name.localeCompare(a.name),
+    stu_high:    (a, b) => Number(b.students || 0) - Number(a.students || 0),
+    stu_low:     (a, b) => Number(a.students || 0) - Number(b.students || 0),
+    plan:        (a, b) => String(a.plan || '').localeCompare(String(b.plan || '')) || a.name.localeCompare(b.name),
+    created_new: (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
+    created_old: (a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0)
+  }[instUI.sort] || ((a, b) => 0);
+  const arr = list.slice().sort((a, b) => {
+    if (instUI.pin){ const pa = isMain(a), pb = isMain(b); if (pa !== pb) return pa ? -1 : 1; }
+    const r = by(a, b);
+    return r || (a._i - b._i);          // stable: fall back to the original order
+  });
+  return arr;
+}
+function renderList(){
+  institutes.forEach((i, idx) => { i._i = idx; });
+  $('st-inst').textContent = institutes.length;
+  $('st-active').textContent = institutes.filter(i => i.status === 'active' && !i.expired).length;
+  $('st-students').textContent = institutes.reduce((a, i) => a + Number(i.students || 0), 0);
+  $('st-expiring').textContent = institutes.filter(i => instState(i) === 'expiring').length;
+  $('st-expired').textContent = institutes.filter(i => instState(i) === 'expired').length;
+
+  $('inst-filters').innerHTML = FILTERS.map(([k, label]) =>
+    `<button class="fchip ${instUI.filter === k ? 'on' : ''}" data-f="${k}">${label} (${institutes.filter(i => inFilter(i, k)).length})</button>`).join('');
+  $('inst-sort').value = instUI.sort; $('inst-pin').checked = !!instUI.pin; $('inst-soon').value = instUI.soon;
+
+  if (!institutes.length){ $('inst-list').innerHTML = '<p class="muted">No institutes found.</p>'; $('inst-count').textContent = ''; return; }
+  const q = instUI.q.trim().toLowerCase();
+  const matches = institutes.filter(i => inFilter(i, instUI.filter) && (!q ||
+    [i.name, i.code, i.admin_id, i.short_name, i.contact_email, i.contact_phone, i.plan, i.join_key]
+      .some(v => String(v || '').toLowerCase().includes(q))));
+  const list = sortList(matches);
+  $('inst-count').textContent = `· showing ${list.length} of ${institutes.length}`;
+  if (!list.length){ $('inst-list').innerHTML = '<p class="muted">No institutes match the search or filter.</p>'; return; }
+  const shown = list.slice(0, instUI.limit);
+  $('inst-list').innerHTML = `<div class="itable">
+    <div class="irow ihead"><div>Institute</div><div>Students</div><div>Plan</div><div>Access</div><div>Live tests</div><div>Status</div></div>` +
+    shown.map(i => {
+      const open = instUI.open === i.code, q2 = i.quota || {};
+      const tests = (q2.limit === null || q2.limit === undefined) ? 'Unlimited' : `${q2.used}/${q2.limit + (q2.extra || 0)}`;
+      return `<div class="irow ${open ? 'open' : ''}" data-code="${esc(i.code)}" role="button" tabindex="0" aria-expanded="${open}">
+        <div><div class="nm">${isMain(i) && instUI.pin ? '<span class="pin" title="Pinned">★</span>' : ''}${esc(i.name)}</div>
+             <div class="sub">${esc(i.code)} · ${esc(i.admin_id || '-')}</div></div>
+        <div><span class="k">Students </span>${Number(i.students || 0)}${i.max_students ? ' / ' + i.max_students : ''}${i.pending ? ` <span class="sub">(${i.pending} pending)</span>` : ''}</div>
+        <div><span class="k">Plan </span>${esc(i.plan || '—')}</div>
+        <div><span class="k">Access </span>${accessShort(i)}</div>
+        <div><span class="k">Live tests </span>${esc(tests)}</div>
+        <div>${stateBadge(i)}</div>
+      </div>${open ? `<div class="idetail">${instCardHtml(i, i._i)}</div>` : ''}`;
+    }).join('') + `</div>` +
+    (list.length > shown.length ? `<div style="text-align:center; margin-top:10px;"><button class="btn" id="inst-more">Show ${Math.min(50, list.length - shown.length)} more (${list.length - shown.length} hidden)</button></div>` : '');
+}
+// Row click → show / hide the full institute card (all existing actions) under the row
+function toggleInstRow(code){
+  instUI.open = instUI.open === code ? null : code;
+  renderList();
+  if (instUI.open){ const r = document.querySelector(`#inst-list .irow[data-code="${CSS.escape(code)}"]`); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+}
+$('inst-list').addEventListener('click', (e) => {
+  if (e.target.id === 'inst-more'){ instUI.limit += 50; renderList(); return; }
+  const row = e.target.closest('.irow[data-code]'); if (row) toggleInstRow(row.dataset.code);
+});
+$('inst-list').addEventListener('keydown', (e) => {
+  const row = e.target.closest('.irow[data-code]');
+  if (row && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); toggleInstRow(row.dataset.code); }
+});
+let instQTimer = null;
+$('inst-q').addEventListener('input', () => { clearTimeout(instQTimer); instQTimer = setTimeout(() => { instUI.q = $('inst-q').value; instUI.limit = 50; renderList(); }, 120); });
+$('inst-filters').addEventListener('click', (e) => { const c = e.target.closest('.fchip'); if (!c) return; instUI.filter = c.dataset.f; instUI.limit = 50; renderList(); });
+$('inst-sort').addEventListener('change', () => { instUI.sort = $('inst-sort').value; saveInstUI(); renderList(); });
+$('inst-pin').addEventListener('change', () => { instUI.pin = $('inst-pin').checked; saveInstUI(); renderList(); });
+$('inst-soon').addEventListener('change', () => {
+  const n = Math.round(Number($('inst-soon').value));
+  instUI.soon = (n >= 1 && n <= 60) ? n : 7; saveInstUI(); renderList();
+});
+
+/* ---------------- COMPACT SECTION BUTTONS ---------------- */
+const SECTIONS = [
+  ['account-box', '👤', 'My account'], ['create-box', '➕', 'Add institute'], ['move-box', '🔀', 'Transfer student'],
+  ['support-box', '📨', 'Support'], ['report-box', '📊', 'Activity report'], ['rp-box', '💳', 'Record payment'],
+  ['email-box', '✉️', 'Email institutes'], ['rev-box', '💰', 'Revenue'], ['portal-card', '🔗', 'Portal URL']];
+function secCard(id){ const el = $(id); return id === 'portal-card' ? el : el.closest('.card'); }
+function openSection(id, force){
+  const card = secCard(id), det = id === 'portal-card' ? null : $(id);
+  const isOpen = !card.classList.contains('hidden');
+  if (isOpen && !force){ closeSection(id); return; }
+  SECTIONS.forEach(([other]) => { if (other !== id) closeSection(other); });
+  card.classList.remove('hidden');
+  if (det && !det.open) det.open = true;                // runs the section's existing "open" logic
+  document.querySelector(`.sec-btn[data-sec="${id}"]`).classList.add('on');
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function closeSection(id){
+  const card = secCard(id), det = id === 'portal-card' ? null : $(id);
+  card.classList.add('hidden');
+  if (det && det.open) det.open = false;                // runs the section's existing "close" logic (e.g. Revenue locks)
+  const b = document.querySelector(`.sec-btn[data-sec="${id}"]`); if (b) b.classList.remove('on');
+}
+(function initSections(){
+  $('sec-bar').innerHTML = SECTIONS.map(([id, ic, label]) =>
+    `<button class="sec-btn" data-sec="${id}" type="button"><span class="ic">${ic}</span><span>${label}</span>${id === 'support-box' ? '<span class="newdot hidden" id="sup-badge2"></span>' : ''}</button>`).join('');
+  SECTIONS.forEach(([id]) => {
+    const card = secCard(id); card.classList.add('sec-card', 'hidden');
+    if (id !== 'portal-card'){
+      // Collapsing a section with its own header also hides it again
+      $(id).addEventListener('toggle', () => { if (!$(id).open && !card.classList.contains('hidden')) closeSection(id); });
+    }
+  });
+  $('sec-bar').addEventListener('click', (e) => { const b = e.target.closest('.sec-btn'); if (b) openSection(b.dataset.sec); });
+})();
 
 $('inst-list').addEventListener('input', (e) => {
   if (e.target.matches('input[data-f="color"]')){
@@ -1030,16 +1255,15 @@ $('inst-list').addEventListener('click', async (e) => {
   if (act === 'edit'){ card.querySelector('.edit-box').classList.toggle('hidden'); return; }
 
   if (act === 'recpay'){
-    $('rp-box').open = true;
+    rpWantCode = inst.code;
+    openSection('rp-box', true);
     await openRecordPayment(inst.code);
-    $('rp-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
     return;
   }
 
   if (act === 'email'){
     renderEmailList([inst.code]);
-    $('email-box').open = true;
-    $('email-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    openSection('email-box', true);
     setTimeout(() => $('em-subject').focus(), 400);
     return;
   }
@@ -1231,6 +1455,7 @@ async function loadTickets(){
     $('tk-counts').textContent = `${c.unread || 0} new · ${c.open || 0} open · ${c.in_progress || 0} in progress · ${c.resolved || 0} resolved`;
     const badge = $('sup-badge');
     if (c.unread > 0){ badge.textContent = `${c.unread} new`; badge.classList.remove('hidden'); } else badge.classList.add('hidden');
+    const b2 = $('sup-badge2'); if (b2){ b2.textContent = badge.textContent; b2.classList.toggle('hidden', !(c.unread > 0)); }
     el.innerHTML = r.tickets.length ? r.tickets.map(t => `
       <div class="tk ${t.unread ? 'unread' : ''}" data-id="${t.id}">
         <div class="tk-top"><b>${esc(t.institute_name)}</b> · ${esc(t.ticket_no)} · ${esc(TK_CAT[t.category] || t.category)}
@@ -1307,7 +1532,9 @@ $('btn-refresh-all').addEventListener('click', async () => {
 
 /* ---------------- RECORD PAYMENT (no revenue PIN; shows no revenue figures) ---------------- */
 let rpPlans = [], rpInstPlans = {}, rpKey = null, rpSaving = false;
+let rpWantCode = null;   // institute chosen from its card; kept until the payment section is closed
 async function openRecordPayment(code){
+  code = code || rpWantCode;
   $('rp-err').textContent = ''; $('rp-ok').innerHTML = '';
   try{
     const r = await rpc('sa_web_active_plans', creds());
@@ -1358,7 +1585,7 @@ function rpRefHint(){ $('rp-ref-label').textContent = REF_RULE[$('rp-method').va
 $('rp-inst').addEventListener('change', rpPrefillPlan);
 $('rp-plan').addEventListener('change', () => { const ip = rpInstPlans[$('rp-inst').value] || {}; rpPrefillAmount($('rp-plan').value === String(ip.plan_id) ? ip.custom_price : null); });
 $('rp-method').addEventListener('change', rpRefHint);
-$('rp-box').addEventListener('toggle', () => { if ($('rp-box').open) openRecordPayment(null); });
+$('rp-box').addEventListener('toggle', () => { if ($('rp-box').open) openRecordPayment(null); else rpWantCode = null; });
 
 $('btn-rp-save').addEventListener('click', async () => {
   if (rpSaving) return;
