@@ -546,6 +546,22 @@
           <label>Payments (selected range)</label>
           <p class="muted" style="font-size:12px; margin:0;">Payments are never deleted. Use <b>Void</b> for a payment entered by mistake, or <b>Refund</b> when money was returned.</p>
           <div class="report-wrap" id="rev-payments"></div>
+          <details style="margin-top:16px;">
+            <summary>🧾 Receipt details (printed on every new receipt)</summary>
+            <div class="grid" style="margin-top:8px;">
+              <div><label>Business name</label><input id="rcs-name" maxlength="120"></div>
+              <div><label>Email</label><input id="rcs-email" maxlength="120"></div>
+              <div><label>Phone</label><input id="rcs-phone" maxlength="40"></div>
+              <div><label>GSTIN (only if registered)</label><input id="rcs-gstin" maxlength="15" placeholder="Leave blank if not registered"></div>
+              <div><label>Authorised signatory — name</label><input id="rcs-signatory_name" maxlength="80"></div>
+              <div><label>Signatory — designation</label><input id="rcs-signatory_title" maxlength="80" placeholder="e.g. Founder"></div>
+            </div>
+            <label>Address</label><input id="rcs-address" maxlength="300">
+            <label>Footer note</label><input id="rcs-note" maxlength="300" placeholder="This is a computer-generated receipt and does not require a physical signature.">
+            <div class="err" id="rcs-err"></div>
+            <button class="btn btn-primary" id="btn-rcs-save" style="margin-top:8px;">Save receipt details</button>
+            <p class="muted" style="font-size:12px; margin:8px 0 0;">This document is a payment receipt, not a tax invoice. Issued receipts keep the details they were issued with.</p>
+          </details>
           </div>
 
           <div class="rev-pane hidden" data-pane="plans">
@@ -1373,12 +1389,103 @@ $('btn-rp-save').addEventListener('click', async () => {
     if (r && r.ok){
       $('rp-ok').innerHTML = `<div class="card" style="margin:10px 0 0; border-color:var(--accent);"><b>✅ Payment recorded successfully.</b>
         <div class="muted" style="margin-top:6px; font-size:13px;">Payment ID #${r.id} · ${esc(r.institute)} · ${inr(r.amount)} · ${esc(r.plan || '—')}${r.access_until ? ' · new paid until ' + dmy(r.access_until) : ''}${r.duplicate ? ' · (already saved earlier)' : ''}</div></div>`;
+      receiptAfterSave(r, 'rp-ok');
       rpKey = newPayKey(); $('rp-ref').value = ''; $('rp-note').value = '';
       await loadList();
       const again = await rpc('sa_web_active_plans', creds()); if (again && again.ok) rpInstPlans = again.institute_plans || {};
     } else errEl.textContent = (r && r.error) || 'Payment could not be saved.';
   }catch(_e){ errEl.textContent = 'Connection error. Payment could not be saved; you can safely try again.'; }
   finally{ rpSaving = false; b.disabled = false; b.textContent = 'Save payment'; }
+});
+
+/* ---------------- PAYMENT RECEIPTS ---------------- */
+async function receiptCall(paymentId, action){
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/payment-receipt`, { method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+    body: JSON.stringify({ username: sa.u, password: sa.p, payment_id: paymentId, action }) });
+  return await res.json();
+}
+async function downloadReceipt(paymentId, btn){
+  if (btn){ btn.disabled = true; }
+  try{
+    const r = await receiptCall(paymentId, 'download');
+    if (!r || !r.ok){ toast((r && r.error && r.error !== 'server_error') ? r.error : 'Unable to prepare the receipt.', 'err'); return; }
+    const bin = atob(r.pdf_base64), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+    a.download = r.filename || 'receipt.pdf';
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  }catch(_e){ toast('Connection error. Is the payment-receipt function deployed?', 'err'); }
+  finally{ if (btn) btn.disabled = false; }
+}
+async function emailReceipt(paymentId, statusEl){
+  if (statusEl) statusEl.innerHTML = '📧 Sending the receipt…';
+  try{
+    const r = await receiptCall(paymentId, 'email');
+    let msg;
+    if (r && r.ok) msg = `📧 Receipt <b>${esc(r.receipt_no)}</b> emailed to ${esc(r.email_to)}.`;
+    else if (r && r.error === 'no_email') msg = `🧾 Receipt <b>${esc(r.receipt_no || '')}</b> is ready. This institute has no contact email — download it and share it, or add an email in Edit details and press Resend.`;
+    else msg = `<span style="color:#ff8a7d;">The receipt email could not be sent${r && r.receipt_no ? ' (' + esc(r.receipt_no) + ')' : ''}. You can download it or try Resend.</span>`;
+    if (statusEl) statusEl.innerHTML = msg;
+    return r;
+  }catch(_e){ if (statusEl) statusEl.innerHTML = '<span style="color:#ff8a7d;">Receipt not sent (connection error, or the payment-receipt function is not deployed yet).</span>'; return null; }
+}
+// After a payment is saved: email the receipt and offer download / resend
+function receiptAfterSave(r, boxId){
+  const box = $(boxId); if (!box || !r || !r.id) return;
+  const holder = document.createElement('div');
+  holder.className = 'muted'; holder.style.cssText = 'font-size:13px; margin-top:8px;';
+  holder.innerHTML = `<div class="rc-status"></div>
+    <div class="btn-row" style="margin-top:6px;"><button class="btn rc-dl" type="button">⬇ Download receipt</button><button class="btn rc-re" type="button">📧 Resend receipt</button></div>`;
+  (box.querySelector('.card') || box).appendChild(holder);
+  holder.querySelector('.rc-dl').addEventListener('click', e => downloadReceipt(r.id, e.currentTarget));
+  holder.querySelector('.rc-re').addEventListener('click', () => emailReceipt(r.id, holder.querySelector('.rc-status')));
+  if (r.duplicate) holder.querySelector('.rc-status').textContent = 'This payment was already saved earlier; its receipt was sent then.';
+  else emailReceipt(r.id, holder.querySelector('.rc-status'));
+}
+
+/* Revenue → Payments: receipt numbers + actions */
+async function fillReceiptColumn(){
+  const cells = [...document.querySelectorAll('#rev-payments [data-rcpt]')];
+  if (!cells.length) return;
+  try{
+    const r = await rpc('sa_web_receipts_for', { ...creds(), p_payment_ids: cells.map(c => Number(c.dataset.rcpt)) });
+    if (!r || !r.ok) return;
+    const map = {}; (r.receipts || []).forEach(x => { map[x.payment_id] = x; });
+    const EM = { sent: '✉ sent', failed: '✉ failed', pending: '', not_sent: '', no_email: 'no email' };
+    cells.forEach(c => {
+      const x = map[c.dataset.rcpt];
+      c.innerHTML = x ? `<b>${esc(x.receipt_no)}</b><div class="muted" style="font-size:11px;">${esc(EM[x.email_status] ?? x.email_status ?? '')}</div>
+        <button class="btn rc-dl2" data-id="${c.dataset.rcpt}" style="padding:3px 8px; margin-top:3px;" title="Download receipt">⬇</button>
+        <button class="btn rc-re2" data-id="${c.dataset.rcpt}" style="padding:3px 8px; margin-top:3px;" title="Email receipt again">📧</button>` : '<span class="muted">—</span>';
+    });
+  }catch(_e){}
+}
+$('rev-payments').addEventListener('click', async (e) => {
+  const d = e.target.closest('.rc-dl2'), s = e.target.closest('.rc-re2');
+  if (d){ downloadReceipt(Number(d.dataset.id), d); }
+  if (s){ s.disabled = true; const r = await emailReceipt(Number(s.dataset.id), null); s.disabled = false;
+    toast(r && r.ok ? `Receipt emailed to ${r.email_to}.` : (r && r.error === 'no_email' ? 'This institute has no contact email.' : 'The receipt email could not be sent.'), r && r.ok ? 'ok' : 'err');
+    fillReceiptColumn(); }
+});
+
+/* Receipt details (PIN) */
+const RC_FIELDS = ['name', 'address', 'phone', 'email', 'gstin', 'signatory_name', 'signatory_title', 'note'];
+async function loadReceiptSettings(){
+  const r = await rpc('sa_web_receipt_settings', { ...revCreds(), p_settings: null });
+  if (revAuthFail(r) || !r || !r.ok) return;
+  RC_FIELDS.forEach(k => { $('rcs-' + k).value = (r.settings || {})[k] || ''; });
+}
+document.querySelector('.rev-tab[data-tab="pays"]').addEventListener('click', loadReceiptSettings);
+$('btn-rcs-save').addEventListener('click', async () => {
+  const errEl = $('rcs-err'); errEl.textContent = ''; revTouch();
+  const st = {}; RC_FIELDS.forEach(k => { st[k] = $('rcs-' + k).value.trim(); });
+  if (st.gstin && !/^[0-9A-Z]{15}$/i.test(st.gstin)){ errEl.textContent = 'GSTIN must be 15 letters/digits, or leave it blank.'; return; }
+  const r = await rpc('sa_web_receipt_settings', { ...revCreds(), p_settings: st });
+  if (revAuthFail(r)) return;
+  if (r && r.ok) toast('Receipt details saved. They appear on new receipts.', 'ok');
+  else errEl.textContent = (r && r.error) || 'Unable to save.';
 });
 
 /* ---------------- EMAIL INSTITUTES ---------------- */
@@ -1643,7 +1750,7 @@ function renderRevenue(){
       <td>${p.is_active ? 'Active' : 'Inactive'}</td><td><button class="btn plan-edit" data-id="${p.id}" style="padding:4px 9px;">✏️ Edit</button></td></tr>`).join('') + '</tbody></table>'
     : '<p class="muted">No plans yet. Create your first plan below, for example: Arambh · ₹500 · Monthly · 4 live tests.</p>';
 
-  $('rev-payments').innerHTML = r.payments.length ? `<table class="report"><thead><tr><th>ID</th><th>Date</th><th>Institute</th><th class="num">Amount</th><th>Plan / period</th><th>Access covered</th><th>Method</th><th>Reference</th><th>Status</th><th></th></tr></thead><tbody>` +
+  $('rev-payments').innerHTML = r.payments.length ? `<table class="report"><thead><tr><th>ID</th><th>Date</th><th>Institute</th><th class="num">Amount</th><th>Plan / period</th><th>Access covered</th><th>Method</th><th>Reference</th><th>Status</th><th>Receipt</th><th></th></tr></thead><tbody>` +
     r.payments.map(p => {
       const st = PAY_STATUS[p.status] || [p.status, 'neutral'];
       const extra = p.status === 'void' ? `<div class="muted" style="font-size:11px;">${esc(p.void_reason || '')}</div>`
@@ -1654,6 +1761,7 @@ function renderRevenue(){
         <td>${p.coverage_start ? dmy(p.coverage_start) + ' – ' + dmy(p.coverage_end) : '—'}</td>
         <td>${esc(p.method || '—')}</td><td>${esc(p.reference || '—')}</td>
         <td><span class="pill ${st[1]}">${esc(st[0])}</span>${extra}</td>
+        <td data-rcpt="${p.id}"><span class="muted">…</span></td>
         <td>${p.status === 'paid' ? `<button class="btn pay-void" data-id="${p.id}" style="padding:4px 9px;">Void</button>` : ''}
             ${canRefund ? `<button class="btn pay-refund" data-id="${p.id}" style="padding:4px 9px;">Refund</button>` : ''}</td></tr>`; }).join('') + '</tbody></table>'
     : '<p class="muted">No payments found for the selected period.</p>';
@@ -1665,6 +1773,7 @@ function renderRevenue(){
   if (keep[1]) $('ip-inst').value = keep[1];
   $('ip-plan').innerHTML = '<option value="">— No plan —</option>' + revPlans.filter(p => p.is_active).map(p => `<option value="${p.id}">${esc(p.name)} · ${inr(p.price)} ${PERIOD_NAME[p.period_months].toLowerCase()}</option>`).join('');
   prefillPayment(); prefillInstPlan(); updateRefHint();
+  fillReceiptColumn();
 }
 
 function statusOf(code){ return revData ? revData.status.find(s => s.code === code) : null; }
@@ -1779,6 +1888,7 @@ $('btn-pay-save').addEventListener('click', async () => {
     if (r && r.ok){
       $('pay-ok').innerHTML = `<div class="card" style="margin:10px 0 0; border-color:var(--accent);"><b>✅ Payment recorded successfully.</b>
         <div class="muted" style="margin-top:6px; font-size:13px;">Payment ID #${r.id} · ${esc(r.institute)} · ${inr(r.amount)} · ${esc(r.plan || '—')}${r.access_until ? ' · new paid until ' + dmy(r.access_until) : ''}${r.duplicate ? ' · (already saved earlier)' : ''}</div></div>`;
+      receiptAfterSave(r, 'pay-ok');
       payKey = newPayKey();
       $('pay-ref').value = ''; $('pay-note').value = '';
       await loadRevenue(); loadList();
