@@ -1630,7 +1630,7 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-10-02.1';
+const APP_VERSION = '2026-10-02.2';
 let updShown = false;
 async function checkForUpdate(){
   try{
@@ -2741,7 +2741,7 @@ $('btn-rev-pdf').addEventListener('click', () => {
 /* ---------------- AUDIT (Revenue PIN) ---------------- */
 const AU_ACTION = Object.assign({}, typeof AUDIT_NAME !== 'undefined' ? AUDIT_NAME : {}, {
   terms_published: 'Terms published', terms_accepted: 'Terms accepted', reminder_settings_changed: 'Reminder settings changed',
-  receipt_settings_changed: 'Receipt details changed' });
+  receipt_settings_changed: 'Receipt details changed', student_record_deleted: 'Student record deleted (by institute admin)' });
 const AU_CAT = { payments: 'Payment', void_refund: 'Void / refund', plans: 'Plan / price', subscriptions: 'Subscription', settings: 'Settings', institutes: 'Institute', other: 'Other' };
 let auPage = 0, auData = null;
 function auLocked(){ return !(typeof revPin !== 'undefined' && revPin); }
