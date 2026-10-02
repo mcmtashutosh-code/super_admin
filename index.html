@@ -665,6 +665,78 @@
     </div>
 
     <div class="card">
+      <details id="audit-box">
+        <summary>🧾 Audit</summary>
+        <div id="au-locked" style="margin-top:12px;">
+          <p class="muted" style="margin:0 0 8px;">The audit trail contains financial records. Enter your revenue PIN to open it.</p>
+          <div style="display:flex; gap:8px; max-width:360px;">
+            <input id="au-pin" type="password" inputmode="numeric" maxlength="6" placeholder="Revenue PIN" autocomplete="off">
+            <button class="btn btn-primary" id="btn-au-unlock" style="flex:none;">🔓 Unlock</button>
+          </div>
+          <div class="err" id="au-lock-err"></div>
+        </div>
+        <div id="au-open" class="hidden">
+          <div class="rev-bar">
+            <div><label>From</label><input id="au-from" type="date"></div>
+            <div><label>To</label><input id="au-to" type="date"></div>
+            <div><label>Category</label>
+              <select class="sel" id="au-cat">
+                <option value="">All categories</option><option value="payments">Payments recorded</option>
+                <option value="void_refund">Void and refunds</option><option value="plans">Plans and prices</option>
+                <option value="subscriptions">Subscription and access</option><option value="settings">Settings and terms</option>
+                <option value="institutes">Institutes</option>
+              </select></div>
+            <div><label>Institute</label><select class="sel" id="au-inst"><option value="">All institutes</option></select></div>
+            <div><label>Search</label><input id="au-q" placeholder="Reference, amount, name…"></div>
+          </div>
+          <div class="btn-row" style="margin-top:8px;">
+            <button class="btn btn-primary" id="btn-au-load">🔄 Load</button>
+            <button class="btn" id="btn-au-verify">🔐 Verify integrity</button>
+            <button class="btn" id="btn-au-csv">⬇ CSV</button>
+            <button class="btn" id="btn-au-print">📄 PDF / Print</button>
+          </div>
+          <div id="au-verify" style="margin-top:8px;"></div>
+          <div class="kpis" id="au-sum" style="grid-template-columns:repeat(5, 1fr);"></div>
+          <p class="muted" id="au-note" style="font-size:12px; margin:8px 0 0;"></p>
+          <div class="report-wrap" id="au-rows"></div>
+          <div class="btn-row" style="justify-content:space-between; align-items:center; margin-top:8px;">
+            <span class="muted" id="au-page" style="font-size:12.5px;"></span>
+            <span><button class="btn" id="btn-au-prev">‹ Previous</button> <button class="btn" id="btn-au-next">Next ›</button></span>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="card">
+      <details id="terms-box">
+        <summary>📜 Terms &amp; conditions</summary>
+        <p class="muted" style="margin:10px 0 0;" id="tm-status"></p>
+        <p class="muted" style="font-size:12px; margin:6px 0 0;">This is a draft prepared for you and is not legal advice. Have it reviewed by a lawyer before relying on it. Institute admins must accept the published version before using their dashboard; publishing a new version asks every admin to accept again.</p>
+        <div class="grid" style="margin-top:6px;">
+          <div><label>Business / legal name</label><input data-tv="BUSINESS_NAME"></div>
+          <div><label>Contact email</label><input data-tv="CONTACT_EMAIL"></div>
+          <div><label>Grievance officer (name)</label><input data-tv="GRIEVANCE_OFFICER"></div>
+          <div><label>Courts at (city, state)</label><input data-tv="JURISDICTION" placeholder="e.g. Varanasi, Uttar Pradesh"></div>
+          <div><label>Data kept after the plan ends (days)</label><input data-tv="RETENTION_DAYS" type="number" min="7" max="365"></div>
+          <div><label>Effective date of the next version</label><input id="tm-eff" type="date"></div>
+        </div>
+        <label>Business address</label><input data-tv="BUSINESS_ADDRESS">
+        <label>Title</label><input id="tm-title" maxlength="200">
+        <label>Terms text (## heading, - bullet point, blank line = new paragraph; {{FIELD}} is filled in from the boxes above)</label>
+        <textarea id="tm-body" style="min-height:320px; font-family:ui-monospace, monospace; font-size:12.5px;"></textarea>
+        <div class="err" id="tm-err"></div>
+        <div class="btn-row">
+          <button class="btn" id="btn-tm-save">💾 Save draft</button>
+          <button class="btn" id="btn-tm-preview">👁 Preview</button>
+          <button class="btn btn-primary" id="btn-tm-publish">📢 Publish new version</button>
+        </div>
+        <div id="tm-preview" class="hidden" style="margin-top:12px; border:1px solid var(--line-soft); border-radius:10px; padding:14px; max-height:420px; overflow:auto;"></div>
+        <label style="margin-top:16px;">Acceptance by institutes</label>
+        <div class="report-wrap" id="tm-acc"></div>
+      </details>
+    </div>
+
+    <div class="card">
       <details id="report-box">
         <summary>📊 Activity report</summary>
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px;">
@@ -1201,7 +1273,8 @@ $('inst-soon').addEventListener('change', () => {
 const SECTIONS = [
   ['account-box', '👤', 'My account'], ['create-box', '➕', 'Add institute'], ['move-box', '🔀', 'Transfer student'],
   ['support-box', '📨', 'Support'], ['report-box', '📊', 'Activity report'], ['rp-box', '💳', 'Record payment'],
-  ['email-box', '✉️', 'Email institutes'], ['rev-box', '💰', 'Revenue'], ['portal-card', '🔗', 'Portal URL']];
+  ['email-box', '✉️', 'Email institutes'], ['rev-box', '💰', 'Revenue'], ['audit-box', '🧾', 'Audit'],
+  ['terms-box', '📜', 'Terms'], ['portal-card', '🔗', 'Portal URL']];
 function secCard(id){ const el = $(id); return id === 'portal-card' ? el : el.closest('.card'); }
 function openSection(id, force){
   const card = secCard(id), det = id === 'portal-card' ? null : $(id);
@@ -1557,7 +1630,7 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-10-01.3';
+const APP_VERSION = '2026-10-02.1';
 let updShown = false;
 async function checkForUpdate(){
   try{
@@ -1888,6 +1961,7 @@ const REV_STATUS = { active: ['Active', 'active'], expiring: ['Expiring soon', '
 function revCreds(){ return { p_username: sa.u, p_password: sa.p, p_pin: revPin }; }
 function revTouch(){ clearTimeout(revTimer); revTimer = setTimeout(() => { revLock(); toast('Revenue locked after 10 minutes of inactivity.'); }, 10 * 60 * 1000); }
 function revLock(){
+  if ($('au-open')){ $('au-open').classList.add('hidden'); $('au-locked').classList.remove('hidden'); }
   revPin = null; revData = null; clearTimeout(revTimer);
   $('rev-open').classList.add('hidden'); $('rev-locked').classList.remove('hidden');
   $('rev-chpin-box').classList.add('hidden');
@@ -2662,6 +2736,192 @@ $('btn-rev-pdf').addEventListener('click', () => {
   const doc = frame.contentWindow.document; doc.open(); doc.write(html); doc.close();
   setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); setTimeout(() => frame.remove(), 60000); }, 300);
   toast('Choose "Save as PDF" or a printer in the print dialog.', 'ok');
+});
+
+/* ---------------- AUDIT (Revenue PIN) ---------------- */
+const AU_ACTION = Object.assign({}, typeof AUDIT_NAME !== 'undefined' ? AUDIT_NAME : {}, {
+  terms_published: 'Terms published', terms_accepted: 'Terms accepted', reminder_settings_changed: 'Reminder settings changed',
+  receipt_settings_changed: 'Receipt details changed' });
+const AU_CAT = { payments: 'Payment', void_refund: 'Void / refund', plans: 'Plan / price', subscriptions: 'Subscription', settings: 'Settings', institutes: 'Institute', other: 'Other' };
+let auPage = 0, auData = null;
+function auLocked(){ return !(typeof revPin !== 'undefined' && revPin); }
+function auShow(){ $('au-locked').classList.toggle('hidden', !auLocked()); $('au-open').classList.toggle('hidden', auLocked()); }
+function auDiff(o, n){
+  o = o || {}; n = n || {};
+  const keys = [...new Set([...Object.keys(o), ...Object.keys(n)])];
+  const fmt = v => v === null || v === undefined || v === '' ? '—' : (typeof v === 'object' ? JSON.stringify(v) : String(v));
+  const parts = keys.filter(k => fmt(o[k]) !== fmt(n[k]) || !Object.keys(o).length)
+    .map(k => Object.keys(o).length ? `<b>${esc(k)}</b>: ${esc(fmt(o[k]))} → ${esc(fmt(n[k]))}` : `<b>${esc(k)}</b>: ${esc(fmt(n[k]))}`);
+  return parts.join('<br>') || '—';
+}
+function auParams(limit, offset){
+  return { ...revCreds(), p_from: $('au-from').value || null, p_to: $('au-to').value || null, p_category: $('au-cat').value || null,
+           p_inst_code: $('au-inst').value || null, p_search: $('au-q').value.trim() || null, p_limit: limit, p_offset: offset };
+}
+async function auLoad(page){
+  if (auLocked()){ auShow(); return; }
+  revTouch(); auPage = page || 0;
+  $('au-rows').innerHTML = '<p class="muted">Loading…</p>';
+  const r = await rpc('sa_web_audit_query', auParams(50, auPage * 50));
+  if (revAuthFail(r)){ auShow(); return; }
+  if (!r || !r.ok){ $('au-rows').innerHTML = `<p class="err">${esc((r && r.error) || 'Unable to load the audit trail.')}</p>`; return; }
+  auData = r;
+  const s = r.summary || {}, c = r.audit_counts || {};
+  const k = (label, val, sub) => `<div class="kpi"><span class="kl">${label}</span><b>${val}</b><span class="kc">${sub || ''}</span></div>`;
+  $('au-sum').innerHTML = k('Payments recorded', s.recorded_count ?? 0, inr(s.recorded_amount)) + k('Voided', s.void_count ?? 0, inr(s.void_amount))
+    + k('Refunds', s.refund_count ?? 0, inr(s.refund_amount)) + k('Cash received (net)', inr(s.cash_received), 'payments minus refunds')
+    + k('Audit entries', r.total, Object.entries(c).map(([kk, v]) => `${AU_CAT[kk] || kk}: ${v}`).join(' · '));
+  $('au-note').textContent = `Period ${dmy(r.from)} to ${dmy(r.to)} (IST). Figures in the first four boxes come directly from the payments table, so they can be checked against the audit entries below. The log has ${r.chain.entries} entries in total since ${dmy(r.chain.first)}; latest fingerprint ${r.chain.last_hash || '—'}.`;
+  $('au-rows').innerHTML = r.rows.length ? `<table class="report"><thead><tr><th>#</th><th>When (IST)</th><th>By</th><th>Action</th><th>Institute</th><th>Item</th><th style="text-align:left;">Details (before → after)</th><th>Fingerprint</th></tr></thead><tbody>` +
+    r.rows.map(x => `<tr><td>${x.no ?? '—'}</td><td>${esc(new Date(x.at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }))}</td>
+      <td>${esc(x.actor)}</td><td><b>${esc(AU_ACTION[x.action] || x.action)}</b><div class="muted" style="font-size:11px;">${esc(AU_CAT[x.category] || x.category)}</div></td>
+      <td>${esc(x.institute || '—')}</td><td>${esc(x.entity)} ${esc(x.entity_id || '')}</td>
+      <td style="white-space:normal; text-align:left; min-width:260px; font-size:12.5px;">${auDiff(x.old, x.new)}</td>
+      <td><code style="font-size:11px;">${esc(x.hash || '')}</code></td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted">No audit entries match these filters.</p>';
+  const from = r.total ? r.offset + 1 : 0, to = Math.min(r.offset + r.limit, r.total);
+  $('au-page').textContent = `${from}–${to} of ${r.total}`;
+  $('btn-au-prev').disabled = auPage === 0; $('btn-au-next').disabled = to >= r.total;
+}
+function auFillInstitutes(){
+  const keep = $('au-inst').value;
+  $('au-inst').innerHTML = '<option value="">All institutes</option>' + institutes.map(i => `<option value="${esc(i.code)}">${esc(i.name)} (${esc(i.code)})</option>`).join('');
+  $('au-inst').value = keep;
+}
+$('audit-box').addEventListener('toggle', () => {
+  if (!$('audit-box').open) return;
+  auShow(); auFillInstitutes();
+  if (!$('au-from').value){ const t = new Date(); $('au-to').value = isoToday(); t.setDate(t.getDate() - 30); $('au-from').value = isoOf(t); }
+  if (!auLocked()) auLoad(0);
+});
+$('btn-au-unlock').addEventListener('click', async () => {
+  const pin = $('au-pin').value.trim(); $('au-lock-err').textContent = '';
+  if (!/^\d{4,6}$/.test(pin)){ $('au-lock-err').textContent = 'Please enter your 4–6 digit PIN.'; return; }
+  const r = await rpc('sa_web_audit_verify', { p_username: sa.u, p_password: sa.p, p_pin: pin });
+  if (r && (r.error === 'invalid' || r.error === 'locked')){ handleAuthError(r); return; }
+  if (!r || !r.ok){ $('au-lock-err').textContent = (r && PIN_MSG[r.error]) || 'Unable to unlock.'; $('au-pin').value = ''; return; }
+  revPin = pin; $('au-pin').value = ''; revTouch(); auShow(); auLoad(0);
+});
+$('au-pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-au-unlock').click(); });
+$('btn-au-load').addEventListener('click', () => auLoad(0));
+['au-cat', 'au-inst'].forEach(id => $(id).addEventListener('change', () => auLoad(0)));
+$('au-q').addEventListener('keydown', e => { if (e.key === 'Enter') auLoad(0); });
+$('btn-au-prev').addEventListener('click', () => auLoad(Math.max(0, auPage - 1)));
+$('btn-au-next').addEventListener('click', () => auLoad(auPage + 1));
+$('btn-au-verify').addEventListener('click', async () => {
+  if (auLocked()){ auShow(); return; } revTouch();
+  $('au-verify').innerHTML = '<p class="muted">Checking every entry…</p>';
+  const r = await rpc('sa_web_audit_verify', revCreds());
+  if (revAuthFail(r)){ auShow(); return; }
+  $('au-verify').innerHTML = r && r.ok
+    ? (r.intact ? `<div class="card" style="margin:0; border-color:var(--accent);">✅ <b>Audit trail intact.</b> All ${r.checked} entries match their fingerprints and none are missing. Latest fingerprint <code>${esc(r.last_hash || '')}</code>.</div>`
+                : `<div class="card" style="margin:0; border-color:#e74c3c;">⚠️ <b>Integrity problem.</b> ${esc(r.problem)} Checked ${r.checked} entries. Entries made through the panel are never edited or deleted, so this indicates a change made directly in the database.</div>`)
+    : '<p class="err">Unable to verify.</p>';
+});
+async function auFetchAll(){
+  const r = await rpc('sa_web_audit_query', auParams(1000, 0));
+  if (revAuthFail(r) || !r || !r.ok){ toast('Unable to load the audit trail.', 'err'); return null; }
+  if (r.total > 1000) toast('Only the latest 1,000 entries are included. Narrow the dates for a complete export.');
+  return r;
+}
+$('btn-au-csv').addEventListener('click', async () => {
+  if (auLocked()) return; revTouch();
+  const r = await auFetchAll(); if (!r) return;
+  const q = v => `"${String(v === null || v === undefined ? '' : (typeof v === 'object' ? JSON.stringify(v) : v)).replace(/"/g, '""')}"`;
+  const lines = [['No', 'When (IST)', 'By', 'Action', 'Category', 'Institute', 'Item', 'Before', 'After', 'Fingerprint'].map(q).join(',')]
+    .concat(r.rows.map(x => [x.no, new Date(x.at).toLocaleString('en-IN'), x.actor, AU_ACTION[x.action] || x.action, AU_CAT[x.category] || x.category,
+                             x.institute || '', `${x.entity} ${x.entity_id || ''}`, x.old, x.new, x.hash].map(q).join(',')));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = `audit-${r.from}-to-${r.to}.csv`; document.body.appendChild(a); a.click(); a.remove();
+});
+$('btn-au-print').addEventListener('click', async () => {
+  if (auLocked()) return; revTouch();
+  const r = await auFetchAll(); if (!r) return;
+  const s = r.summary || {};
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Audit trail ${esc(r.from)} to ${esc(r.to)}</title><style>
+    @page{ size:A4 landscape; margin:12mm; } body{ font-family:Arial, sans-serif; color:#1b2a41; font-size:11px; }
+    h1{ font-size:18px; margin:0 0 4px; } .sub{ color:#666; margin-bottom:10px; } .sum{ display:flex; gap:18px; margin:8px 0 12px; } .sum b{ display:block; font-size:14px; }
+    table{ width:100%; border-collapse:collapse; } th{ background:#1b2a41; color:#fff; padding:5px; text-align:left; } td{ padding:4px 5px; border-bottom:1px solid #e3e7ee; vertical-align:top; }
+    tr{ page-break-inside:avoid; } code{ font-size:10px; }</style></head><body>
+    <h1>Vidyapath CBT — Audit trail</h1>
+    <div class="sub">${dmy(r.from)} to ${dmy(r.to)} (IST) · ${r.total} entries${$('au-cat').value ? ' · ' + esc(AU_CAT[$('au-cat').value]) : ''}${$('au-inst').value ? ' · ' + esc($('au-inst').value) : ''} · generated ${esc(new Date().toLocaleString('en-IN'))} · Confidential</div>
+    <div class="sum"><div>Payments recorded<b>${s.recorded_count} · ${inr(s.recorded_amount)}</b></div><div>Voided<b>${s.void_count} · ${inr(s.void_amount)}</b></div>
+      <div>Refunds<b>${s.refund_count} · ${inr(s.refund_amount)}</b></div><div>Cash received (net)<b>${inr(s.cash_received)}</b></div></div>
+    <table><tr><th>#</th><th>When</th><th>By</th><th>Action</th><th>Institute</th><th>Item</th><th>Details</th><th>Fingerprint</th></tr>
+    ${r.rows.map(x => `<tr><td>${x.no ?? ''}</td><td>${esc(new Date(x.at).toLocaleString('en-IN'))}</td><td>${esc(x.actor)}</td><td>${esc(AU_ACTION[x.action] || x.action)}</td>
+      <td>${esc(x.institute || '')}</td><td>${esc(x.entity)} ${esc(x.entity_id || '')}</td><td>${auDiff(x.old, x.new)}</td><td><code>${esc(x.hash || '')}</code></td></tr>`).join('')}</table>
+    <p style="color:#888; margin-top:10px;">Each entry carries a SHA-256 fingerprint chained to the previous entry; "Verify integrity" in the panel re-checks the whole chain.</p></body></html>`;
+  const frame = document.createElement('iframe');
+  frame.style.cssText = 'position:fixed; right:0; bottom:0; width:0; height:0; border:0; visibility:hidden;';
+  document.body.appendChild(frame);
+  const doc = frame.contentWindow.document; doc.open(); doc.write(html); doc.close();
+  setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); setTimeout(() => frame.remove(), 60000); }, 300);
+});
+
+/* ---------------- TERMS & CONDITIONS (draft, publish, acceptances) ---------------- */
+function renderTerms(text){
+  const out = []; let list = null;
+  String(text || '').split(/\r?\n/).forEach(line => {
+    const l = line.trim();
+    if (l.startsWith('- ')){ if (!list){ list = []; } list.push(`<li>${esc(l.slice(2))}</li>`); return; }
+    if (list){ out.push(`<ul style="margin:4px 0 10px 18px; padding:0;">${list.join('')}</ul>`); list = null; }
+    if (!l) return;
+    if (l.startsWith('## ')) out.push(`<h3 style="font-size:14.5px; margin:16px 0 6px;">${esc(l.slice(3))}</h3>`);
+    else out.push(`<p style="margin:0 0 8px; line-height:1.55;">${esc(l)}</p>`);
+  });
+  if (list) out.push(`<ul style="margin:4px 0 10px 18px; padding:0;">${list.join('')}</ul>`);
+  return out.join('');
+}
+let tmDraft = null;
+function tmCollect(){
+  const vars = {}; document.querySelectorAll('[data-tv]').forEach(el => { vars[el.dataset.tv] = el.value.trim(); });
+  return { title: $('tm-title').value.trim(), body: $('tm-body').value, vars };
+}
+async function loadTerms(){
+  const r = await rpc('sa_web_terms', creds());
+  if (handleAuthError(r) || !r || !r.ok) return;
+  tmDraft = r.draft || {};
+  const v = tmDraft.vars || {};
+  document.querySelectorAll('[data-tv]').forEach(el => { el.value = v[el.dataset.tv] ?? ''; });
+  $('tm-title').value = tmDraft.title || ''; $('tm-body').value = tmDraft.body || '';
+  if (!$('tm-eff').value) $('tm-eff').value = isoToday();
+  const cur = r.current;
+  $('tm-status').innerHTML = cur ? `Published: <b>version ${cur.version}</b>, effective ${dmy(cur.effective_date)}.`
+                                 : '<b>Not published yet.</b> Admins are not asked to accept anything until you publish version 1.';
+  $('tm-acc').innerHTML = r.acceptances.length ? `<table class="report"><thead><tr><th>Institute</th><th>Status</th><th>Accepted version</th><th>Accepted by</th><th>When</th></tr></thead><tbody>` +
+    r.acceptances.map(a => { const ok = cur && a.accepted && a.accepted.version === cur.version;
+      return `<tr><td>${esc(a.name)} <span class="muted">(${esc(a.code)})</span></td>
+        <td>${cur ? (ok ? '<span class="pill active">Accepted</span>' : '<span class="pill warn">Pending</span>') : '—'}</td>
+        <td>${a.accepted ? 'v' + a.accepted.version : '—'}</td>
+        <td>${a.accepted ? esc(a.accepted.name) + ', ' + esc(a.accepted.role) + ` <span class="muted">(${esc(a.accepted.admin_id)})</span>` : '—'}</td>
+        <td>${a.accepted ? esc(new Date(a.accepted.at).toLocaleString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })) : '—'}</td></tr>`; }).join('') + '</tbody></table>'
+    : '<p class="muted">No institutes yet.</p>';
+}
+$('terms-box').addEventListener('toggle', () => { if ($('terms-box').open) loadTerms(); });
+async function tmSave(quiet){
+  $('tm-err').textContent = '';
+  const r = await rpc('sa_web_terms_save_draft', { ...creds(), p_draft: tmCollect() });
+  if (handleAuthError(r)) return false;
+  if (r && r.ok){ if (!quiet) toast('Draft saved.', 'ok'); return true; }
+  $('tm-err').textContent = (r && r.error) || 'Unable to save.'; return false;
+}
+$('btn-tm-save').addEventListener('click', () => tmSave(false));
+$('btn-tm-preview').addEventListener('click', () => {
+  const d = tmCollect(); let body = d.body;
+  Object.entries(d.vars).forEach(([k, v]) => { body = body.split('{{' + k + '}}').join(v || `[${k}]`); });
+  $('tm-preview').innerHTML = `<h2 style="font-size:17px; margin:0 0 6px;">${esc(d.title)}</h2>` + renderTerms(body);
+  $('tm-preview').classList.toggle('hidden');
+});
+$('btn-tm-publish').addEventListener('click', async () => {
+  if (!(await tmSave(true))) return;
+  if (!confirm('Publish this as a new version?\n\nEvery institute admin will have to read and accept it before using their dashboard again.')) return;
+  const pin = (typeof revPin !== 'undefined' && revPin) || prompt('Enter your revenue PIN to publish:');
+  if (!pin) return;
+  const r = await rpc('sa_web_terms_publish', { ...creds(), p_pin: String(pin).trim(), p_effective_date: $('tm-eff').value || null });
+  if (r && (r.error === 'invalid' || r.error === 'locked')){ handleAuthError(r); return; }
+  if (r && r.ok){ toast(`Version ${r.version} published.`, 'ok'); loadTerms(); }
+  else $('tm-err').textContent = (r && (PIN_MSG[r.error] || r.error)) || 'Unable to publish.';
 });
 
 /* ---------------- ACTIVITY REPORT ---------------- */
