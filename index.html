@@ -84,6 +84,11 @@
   .idetail .card{ margin-bottom:0; }
   .pin{ color:#f5b041; margin-right:4px; }
   .irow .pill{ white-space:nowrap; }
+  .qa{ display:inline-flex; align-items:center; justify-content:center; width:26px; height:24px; border:1px solid var(--line-soft); border-radius:7px;
+       text-decoration:none; font-size:12.5px; margin-left:4px; vertical-align:middle; background:var(--field); }
+  .qa:hover{ border-color:var(--accent); }
+  .iquick{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; font-size:13px; }
+  .iquick a, .iquick button{ text-decoration:none; }
   .pill.noexp{ background:#3498db33; color:#5dade2; }
   @media (max-width:860px){
     .stats{ grid-template-columns:repeat(3, 1fr); }
@@ -1100,6 +1105,33 @@ function sortList(list){
   });
   return arr;
 }
+/* Quick contact (free): phone call and WhatsApp click-to-chat with a ready message */
+function phoneDigits(i){ return String(i.contact_phone || '').replace(/[^0-9+]/g, ''); }
+function instWaLink(i){
+  const d = String(i.contact_phone || '').replace(/\D/g, '');
+  if (d.length < 10) return null;
+  const num = d.length === 10 ? '91' + d : d;
+  const st = instState(i), until = i.plan_expires_at ? dmyShort(i.plan_expires_at) : '';
+  let body = `Dear ${i.name} team,\n\n`;
+  if (st === 'expired') body += `Your Vidyapath CBT subscription${i.plan ? ' (' + i.plan + ')' : ''} expired on ${until}. Please renew to restore access for your students.\n\n`;
+  else if (st === 'expiring') body += `Your Vidyapath CBT subscription${i.plan ? ' (' + i.plan + ')' : ''} will expire on ${until}. Please renew to continue uninterrupted access.\n\n`;
+  body += 'Regards,\nVidyapath CBT Platform';
+  return `https://wa.me/${num}?text=${encodeURIComponent(body)}`;
+}
+function quickIcons(i){
+  const tel = phoneDigits(i), wa = instWaLink(i);
+  return (tel ? `<a class="qa" href="tel:${esc(tel)}" title="Call ${esc(i.contact_phone)}">📞</a>` : '')
+       + (wa ? `<a class="qa" href="${esc(wa)}" target="_blank" rel="noopener" title="WhatsApp ${esc(i.contact_phone)}">💬</a>` : '');
+}
+function quickBar(i){
+  const tel = phoneDigits(i), wa = instWaLink(i);
+  return `<div class="iquick">
+    ${tel ? `<a class="btn" href="tel:${esc(tel)}">📞 Call ${esc(i.contact_phone)}</a>` : ''}
+    ${wa ? `<a class="btn" href="${esc(wa)}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}
+    ${i.contact_email ? `<button class="btn iq-email" data-code="${esc(i.code)}" type="button">✉️ Email ${esc(i.contact_email)}</button>` : ''}
+    ${!tel && !i.contact_email ? '<span class="muted">No phone or email saved. Add them in Edit details to call, WhatsApp or email this institute.</span>' : ''}
+  </div>`;
+}
 function renderList(){
   institutes.forEach((i, idx) => { i._i = idx; });
   $('st-inst').textContent = institutes.length;
@@ -1128,13 +1160,13 @@ function renderList(){
       const tests = (q2.limit === null || q2.limit === undefined) ? 'Unlimited' : `${q2.used}/${q2.limit + (q2.extra || 0)}`;
       return `<div class="irow ${open ? 'open' : ''}" data-code="${esc(i.code)}" role="button" tabindex="0" aria-expanded="${open}">
         <div><div class="nm">${isMain(i) && instUI.pin ? '<span class="pin" title="Pinned">★</span>' : ''}${esc(i.name)}</div>
-             <div class="sub">${esc(i.code)} · ${esc(i.admin_id || '-')}</div></div>
+             <div class="sub">${esc(i.code)} · ${esc(i.admin_id || '-')}${quickIcons(i)}</div></div>
         <div><span class="k">Students </span>${Number(i.students || 0)}${i.max_students ? ' / ' + i.max_students : ''}${i.pending ? ` <span class="sub">(${i.pending} pending)</span>` : ''}</div>
         <div><span class="k">Plan </span>${esc(i.plan || '—')}</div>
         <div><span class="k">Access </span>${accessShort(i)}</div>
         <div><span class="k">Live tests </span>${esc(tests)}</div>
         <div>${stateBadge(i)}</div>
-      </div>${open ? `<div class="idetail">${instCardHtml(i, i._i)}</div>` : ''}`;
+      </div>${open ? `<div class="idetail">${quickBar(i)}${instCardHtml(i, i._i)}</div>` : ''}`;
     }).join('') + `</div>` +
     (list.length > shown.length ? `<div style="text-align:center; margin-top:10px;"><button class="btn" id="inst-more">Show ${Math.min(50, list.length - shown.length)} more (${list.length - shown.length} hidden)</button></div>` : '');
 }
@@ -1146,6 +1178,9 @@ function toggleInstRow(code){
 }
 $('inst-list').addEventListener('click', (e) => {
   if (e.target.id === 'inst-more'){ instUI.limit += 50; renderList(); return; }
+  const em = e.target.closest('.iq-email');
+  if (em){ renderEmailList([em.dataset.code]); openSection('email-box', true); setTimeout(() => $('em-subject').focus(), 400); return; }
+  if (e.target.closest('a')) return;                 // Call / WhatsApp links
   const row = e.target.closest('.irow[data-code]'); if (row) toggleInstRow(row.dataset.code);
 });
 $('inst-list').addEventListener('keydown', (e) => {
@@ -1522,7 +1557,7 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-10-01.2';
+const APP_VERSION = '2026-10-01.3';
 let updShown = false;
 async function checkForUpdate(){
   try{
