@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>Super Admin — CBT Platform</title>
+<title>Super Admin — Dhyeodaya</title>
 <meta name="theme-color" content="#0a1424">
 <link rel="manifest" href="superadmin.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="sa-favicon-32.png">
@@ -194,7 +194,7 @@
 <div class="wrap">
 
   <div class="bar">
-    <div class="brand"><img class="brand-logo" src="sa-icon-192.png" alt=""><span>Platform Administration</span></div>
+    <div class="brand"><img class="brand-logo" src="sa-icon-192.png" alt=""><span>Dhyeodaya <span style="font-weight:400; color:var(--text-dim); font-size:13px;">· Platform Administration</span></span></div>
     <div class="bar-actions">
       <button class="btn hidden" id="btn-refresh-all" title="Refresh">🔄 Refresh</button>
       <button class="btn hidden" id="btn-install">📲 Install app</button>
@@ -665,6 +665,33 @@
     </div>
 
     <div class="card">
+      <details id="banner-box">
+        <summary>📢 Announcement banner</summary>
+        <p class="muted" style="margin:10px 0 0;">A scrolling banner at the top of the admin dashboard of the institutes you choose. It stops by itself after the date. Institute admins can hide it for the day.</p>
+        <label>Message (max 300 characters)</label>
+        <textarea id="bn-msg" maxlength="300" style="min-height:70px;" placeholder="e.g. Sunday 2–4 PM maintenance — please do not schedule exams."></textarea>
+        <div class="muted" id="bn-count" style="font-size:12px; text-align:right;">0 / 300</div>
+        <div class="grid">
+          <div><label>Show until (end of day)</label><input type="date" id="bn-until"></div>
+          <div><label>Show to</label>
+            <div style="display:flex; gap:16px; padding-top:8px;">
+              <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:6px; align-items:center; color:var(--text); margin:0;"><input type="radio" name="bn-aud" value="all" checked style="width:auto;"> All institutes</label>
+              <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:6px; align-items:center; color:var(--text); margin:0;"><input type="radio" name="bn-aud" value="some" style="width:auto;"> Selected institutes</label>
+            </div></div>
+        </div>
+        <div id="bn-pick" class="hidden" style="margin-top:8px;">
+          <input id="bn-search" placeholder="Search institute…" autocomplete="off">
+          <div id="bn-list" style="max-height:220px; overflow:auto; border:1px solid var(--line-soft); border-radius:10px; padding:6px 10px; margin-top:6px;"></div>
+          <div class="muted" id="bn-sel" style="font-size:12px; margin-top:4px;"></div>
+        </div>
+        <div class="err" id="bn-err"></div>
+        <button class="btn btn-primary" id="btn-bn-post" style="margin-top:8px;">📢 Start banner</button>
+        <label style="margin-top:16px;">Recent banners</label>
+        <div class="report-wrap" id="bn-rows"></div>
+      </details>
+    </div>
+
+    <div class="card">
       <details id="audit-box">
         <summary>🧾 Audit</summary>
         <div id="au-locked" style="margin-top:12px;">
@@ -961,7 +988,7 @@ async function loadList(){
 }
 $('btn-refresh').addEventListener('click', () => refreshAll());
 
-/* ---------------- PLAN PRESETS (Vidyapath CBT 1.0) ---------------- */
+/* ---------------- PLAN PRESETS (Dhyeodaya 1.0) ---------------- */
 const PLAN_PRESETS = {
   trial:    { label: 'Free trial — 7 days',   plan: 'Trial',    students: 50,  tests: 1, days: 7, prices: null },
   aarambh:  { label: 'Aarambh — up to 50',    plan: 'Aarambh',  students: 50,  tests: 4, prices: { 1: 500,  3: 1399, 6: 2699,  12: 4999 } },
@@ -1185,9 +1212,9 @@ function instWaLink(i){
   const num = d.length === 10 ? '91' + d : d;
   const st = instState(i), until = i.plan_expires_at ? dmyShort(i.plan_expires_at) : '';
   let body = `Dear ${i.name} team,\n\n`;
-  if (st === 'expired') body += `Your Vidyapath CBT subscription${i.plan ? ' (' + i.plan + ')' : ''} expired on ${until}. Please renew to restore access for your students.\n\n`;
-  else if (st === 'expiring') body += `Your Vidyapath CBT subscription${i.plan ? ' (' + i.plan + ')' : ''} will expire on ${until}. Please renew to continue uninterrupted access.\n\n`;
-  body += 'Regards,\nVidyapath CBT Platform';
+  if (st === 'expired') body += `Your Dhyeodaya subscription${i.plan ? ' (' + i.plan + ')' : ''} expired on ${until}. Please renew to restore access for your students.\n\n`;
+  else if (st === 'expiring') body += `Your Dhyeodaya subscription${i.plan ? ' (' + i.plan + ')' : ''} will expire on ${until}. Please renew to continue uninterrupted access.\n\n`;
+  body += 'Regards,\nTeam Dhyeodaya\nतैयारी से सफलता तक';
   return `https://wa.me/${num}?text=${encodeURIComponent(body)}`;
 }
 function quickIcons(i){
@@ -1273,7 +1300,7 @@ $('inst-soon').addEventListener('change', () => {
 const SECTIONS = [
   ['account-box', '👤', 'My account'], ['create-box', '➕', 'Add institute'], ['move-box', '🔀', 'Transfer student'],
   ['support-box', '📨', 'Support'], ['report-box', '📊', 'Activity report'], ['rp-box', '💳', 'Record payment'],
-  ['email-box', '✉️', 'Email institutes'], ['rev-box', '💰', 'Revenue'], ['audit-box', '🧾', 'Audit'],
+  ['email-box', '✉️', 'Email institutes'], ['banner-box', '📢', 'Banner'], ['rev-box', '💰', 'Revenue'], ['audit-box', '🧾', 'Audit'],
   ['terms-box', '📜', 'Terms'], ['portal-card', '🔗', 'Portal URL']];
 function secCard(id){ const el = $(id); return id === 'portal-card' ? el : el.closest('.card'); }
 function openSection(id, force){
@@ -1630,7 +1657,7 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-10-02.2';
+const APP_VERSION = '2026-10-04.1';
 let updShown = false;
 async function checkForUpdate(){
   try{
@@ -2509,7 +2536,7 @@ function waLink(r){
   if (digits.length < 10) return null;
   const num = digits.length === 10 ? '91' + digits : digits;
   const ended = r.days_left !== null && r.days_left <= 0;
-  const msg = `Dear ${r.name} team,\n\nYour Vidyapath CBT subscription${r.plan ? ' (' + r.plan + ')' : ''} ${ended ? 'expired on' : 'will expire on'} ${dmy(r.paid_until)}.${r.amount ? ' Renewal amount: ' + inr(r.amount) + '.' : ''}\n\nPlease renew to continue uninterrupted access for your students.\n\nRegards,\nVidyapath CBT Platform`;
+  const msg = `Dear ${r.name} team,\n\nYour Dhyeodaya subscription${r.plan ? ' (' + r.plan + ')' : ''} ${ended ? 'expired on' : 'will expire on'} ${dmy(r.paid_until)}.${r.amount ? ' Renewal amount: ' + inr(r.amount) + '.' : ''}\n\nPlease renew to continue uninterrupted access for your students.\n\nRegards,\nTeam Dhyeodaya\nतैयारी से सफलता तक`;
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
 }
 function renderOverview(){
@@ -2700,7 +2727,7 @@ $('btn-rev-pdf').addEventListener('click', () => {
       td { padding: 5px 6px; border-bottom: 1px solid #e3e7ee; } tr:nth-child(even) td { background: #f6f8fb; } tr { page-break-inside: avoid; }
       .r { text-align: right; } .foot { margin-top: 16px; font-size: 10px; color: #888; }
     </style></head><body>
-    <h1>Vidyapath CBT — Revenue &amp; Subscriptions Report</h1>
+    <h1>Dhyeodaya — Revenue &amp; Subscriptions Report</h1>
     <div class="sub">${dmy(revOv.from)} to ${dmy(revOv.to)}${(revOv.filters.institute || revOv.filters.plan_id || revOv.filters.method) ? ' · filters applied' : ''} · generated ${esc(gen)} · Confidential</div>
     <div class="sum"><div>Cash collected<b>${inr(revOv.kpi.cash)}</b></div><div>Current MRR<b>${inr(revOv.kpi.mrr)}</b></div>
       <div>ARR<b>${inr(revOv.kpi.arr)}</b></div><div>Active paid institutes<b>${revOv.kpi.active_paid}</b></div></div>
@@ -2736,6 +2763,62 @@ $('btn-rev-pdf').addEventListener('click', () => {
   const doc = frame.contentWindow.document; doc.open(); doc.write(html); doc.close();
   setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); setTimeout(() => frame.remove(), 60000); }, 300);
   toast('Choose "Save as PDF" or a printer in the print dialog.', 'ok');
+});
+
+/* ---------------- ANNOUNCEMENT BANNER (to institute admins) ---------------- */
+const bnSel = new Set();
+function bnIso(n){ const d = new Date(Date.now() + 5.5*3600e3 + n*86400e3); return d.toISOString().slice(0, 10); }
+function bnRenderPick(){
+  const q = $('bn-search').value.trim().toLowerCase();
+  const list = institutes.filter(i => !q || i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q));
+  $('bn-list').innerHTML = list.map(i => `<label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text); margin:4px 0;">
+      <input type="checkbox" class="bn-cb" value="${esc(i.code)}" ${bnSel.has(i.code) ? 'checked' : ''} style="width:auto;"> ${esc(i.name)} <span class="muted">(${esc(i.code)})</span></label>`).join('') || '<p class="muted">No institute matches.</p>';
+  $('bn-sel').textContent = `${bnSel.size} selected`;
+}
+async function bnLoad(){
+  const r = await rpc('sa_web_banners', creds());
+  if (handleAuthError(r) || !r || !r.ok){ $('bn-rows').innerHTML = '<p class="muted">Unable to load banners.</p>'; return; }
+  $('bn-rows').innerHTML = r.rows.length ? `<table class="report"><thead><tr><th style="text-align:left;">Message</th><th>Shown to</th><th>Until</th><th>Status</th><th></th></tr></thead><tbody>` +
+    r.rows.map(b => `<tr><td style="white-space:normal; text-align:left; min-width:220px;">${esc(b.message)}</td>
+      <td style="white-space:normal;">${b.target_all ? 'All institutes' : (b.institutes || []).map(i => esc(i.name)).join(', ')}</td>
+      <td>${esc(new Date(b.ends_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }))}</td>
+      <td>${b.running ? '<span class="pill active">Running</span>' : '<span class="pill neutral">Ended</span>'}</td>
+      <td>${b.running ? `<button class="btn bn-stop" data-id="${b.id}" style="padding:4px 10px;">Stop</button>` : ''}</td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted">No banners yet.</p>';
+}
+$('banner-box').addEventListener('toggle', () => {
+  if (!$('banner-box').open) return;
+  if (!$('bn-until').value){ $('bn-until').value = bnIso(3); $('bn-until').min = bnIso(0); $('bn-until').max = bnIso(60); }
+  bnRenderPick(); bnLoad();
+});
+$('bn-msg').addEventListener('input', () => { $('bn-count').textContent = `${$('bn-msg').value.length} / 300`; });
+document.querySelectorAll('input[name="bn-aud"]').forEach(r => r.addEventListener('change', () => {
+  $('bn-pick').classList.toggle('hidden', document.querySelector('input[name="bn-aud"]:checked').value !== 'some');
+}));
+$('bn-search').addEventListener('input', bnRenderPick);
+$('bn-list').addEventListener('change', (e) => { const c = e.target.closest('.bn-cb'); if (!c) return; if (c.checked) bnSel.add(c.value); else bnSel.delete(c.value); $('bn-sel').textContent = `${bnSel.size} selected`; });
+$('btn-bn-post').addEventListener('click', async () => {
+  $('bn-err').textContent = '';
+  const all = document.querySelector('input[name="bn-aud"]:checked').value === 'all';
+  const msg = $('bn-msg').value.trim();
+  if (msg.length < 3){ $('bn-err').textContent = 'Please type the banner message.'; return; }
+  if (!all && !bnSel.size){ $('bn-err').textContent = 'Choose at least one institute, or All institutes.'; return; }
+  const who = all ? 'ALL institutes' : `${bnSel.size} selected institute(s)`;
+  if (!confirm(`Start this banner for ${who} until ${$('bn-until').value}?\n\n${msg}`)) return;
+  const b = $('btn-bn-post'); b.disabled = true;
+  const r = await rpc('sa_web_banner_add', { ...creds(), p_message: msg, p_until: $('bn-until').value, p_target_all: all, p_codes: all ? [] : [...bnSel] });
+  b.disabled = false;
+  if (handleAuthError(r)) return;
+  if (r && r.ok){ toast('Banner started.', 'ok'); $('bn-msg').value = ''; $('bn-count').textContent = '0 / 300'; bnSel.clear(); bnRenderPick(); bnLoad(); }
+  else $('bn-err').textContent = (r && r.error) || 'Unable to start the banner.';
+});
+$('bn-rows').addEventListener('click', async (e) => {
+  const s = e.target.closest('.bn-stop'); if (!s) return;
+  if (!confirm('Stop this banner now?')) return;
+  s.disabled = true;
+  const r = await rpc('sa_web_banner_stop', { ...creds(), p_id: Number(s.dataset.id) });
+  if (handleAuthError(r)) return;
+  toast(r && r.ok ? 'Banner stopped.' : 'Unable to stop the banner.', r && r.ok ? 'ok' : 'err'); bnLoad();
 });
 
 /* ---------------- AUDIT (Revenue PIN) ---------------- */
@@ -2844,7 +2927,7 @@ $('btn-au-print').addEventListener('click', async () => {
     h1{ font-size:18px; margin:0 0 4px; } .sub{ color:#666; margin-bottom:10px; } .sum{ display:flex; gap:18px; margin:8px 0 12px; } .sum b{ display:block; font-size:14px; }
     table{ width:100%; border-collapse:collapse; } th{ background:#1b2a41; color:#fff; padding:5px; text-align:left; } td{ padding:4px 5px; border-bottom:1px solid #e3e7ee; vertical-align:top; }
     tr{ page-break-inside:avoid; } code{ font-size:10px; }</style></head><body>
-    <h1>Vidyapath CBT — Audit trail</h1>
+    <h1>Dhyeodaya — Audit trail</h1>
     <div class="sub">${dmy(r.from)} to ${dmy(r.to)} (IST) · ${r.total} entries${$('au-cat').value ? ' · ' + esc(AU_CAT[$('au-cat').value]) : ''}${$('au-inst').value ? ' · ' + esc($('au-inst').value) : ''} · generated ${esc(new Date().toLocaleString('en-IN'))} · Confidential</div>
     <div class="sum"><div>Payments recorded<b>${s.recorded_count} · ${inr(s.recorded_amount)}</b></div><div>Voided<b>${s.void_count} · ${inr(s.void_amount)}</b></div>
       <div>Refunds<b>${s.refund_count} · ${inr(s.refund_amount)}</b></div><div>Cash received (net)<b>${inr(s.cash_received)}</b></div></div>
