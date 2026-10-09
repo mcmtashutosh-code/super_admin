@@ -135,6 +135,15 @@
   .mchip i{ width:10px; height:10px; border-radius:3px; display:inline-block; } .chart .bar.none{ background:transparent; border:1px dashed var(--line-soft); height:30px; }
   .chart .v{ font-size:10.5px; color:var(--text-dim); margin-bottom:3px; white-space:nowrap; }
   .chart .l{ font-size:10.5px; color:var(--text-dim); margin-top:4px; white-space:nowrap; }
+  #audit-alerts:not(:empty){ margin-bottom:12px; }
+  .al-bar{ display:flex; gap:10px; align-items:flex-start; border-radius:12px; padding:11px 14px; margin:10px 0 0; font-size:13.5px; cursor:pointer; text-align:left; width:100%; font:inherit; }
+  .al-bar.critical{ background:#e74c3c26; border:1px solid #e74c3c; color:#ffb3aa; }
+  .al-bar.warning{ background:#f39c1220; border:1px solid #f39c1288; color:#f8c471; }
+  .al-bar b{ color:inherit; } .al-bar .al-go{ margin-left:auto; flex:none; font-size:12px; text-decoration:underline; opacity:.9; }
+  .al-bar.critical .al-ic{ animation:alPulse 1.4s ease-in-out infinite; }
+  @keyframes alPulse{ 50%{ opacity:.35; } }
+  .sec-btn.al-red{ border-color:#e74c3c; box-shadow:0 0 0 1px #e74c3c inset; }
+  .rev-tab.al-red{ border-color:#e74c3c; color:#ff8a7d; }
   .ra-top{ display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-top:12px; }
   .ra-top input[type=month]{ width:auto; min-width:180px; }
   .ra-status{ margin-top:12px; } .ra-st-row{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; }
@@ -235,6 +244,8 @@
       <div class="stat warn" title="Access ends within the 'expiring soon' window"><b id="st-expiring">–</b><span>Expiring soon</span></div>
       <div class="stat bad"><b id="st-expired">–</b><span>Expired</span></div>
     </div>
+
+    <div id="audit-alerts"></div>
 
     <div class="sec-bar" id="sec-bar"></div>
 
@@ -1012,6 +1023,7 @@ async function doLogin(){
       $('btn-logout').classList.remove('hidden');
       $('btn-refresh-all').classList.remove('hidden');
       loadList();
+      loadAuditAlerts();
     } else if (r && r.error === 'locked'){
       $('login-err').textContent = 'Too many failed attempts. Please try again in 15 minutes.';
     } else {
@@ -1743,7 +1755,7 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-10-09.1';
+const APP_VERSION = '2026-10-09.3';
 let updShown = false;
 async function checkForUpdate(){
   try{
@@ -1781,6 +1793,7 @@ async function refreshAll(){
   const b = $('btn-refresh-all'); b.disabled = true; b.textContent = '🔄 Refreshing...';
   try{
     await loadList();                                              // institutes, usage, support badge
+    loadAuditAlerts();
     if ($('email-box').open) loadEmailLog();
     if ($('report-box').open && !$('report-out').querySelector('.muted')) $('btn-report').click();
     if ($('support-box').open && !$('tk-thread-wrap').classList.contains('hidden') && tkCurrent) openTicket(tkCurrent);
@@ -2111,6 +2124,7 @@ async function revOpenWith(pin, plans){
   revTouch();
   await loadRevenue();
   autoRunReminders();
+  if (raPendingOpen){ const m = raPendingOpen.month; raPendingOpen = null; showRevTab('ra'); if (m) $('ra-month').value = m; raLoad(); }
 }
 $('btn-rev-unlock').addEventListener('click', async () => {
   const pin = $('rev-pin').value.trim(); $('rev-lock-err').textContent = '';
@@ -2418,8 +2432,14 @@ $('rev-payments').addEventListener('click', async (e) => {
     if (reason.trim().length < 3){ toast('Please give a reason (at least 3 characters).', 'err'); return; }
     let revert = false;
     if (p.coverage_end) revert = confirm(`This payment extended access until ${dmy(p.coverage_end)}.\n\nAlso move the institute's access back to ${dmy(new Date(new Date(p.coverage_start).getTime() - 86400000))}?\n\nOK = move access back (only possible if this was the latest recharge)\nCancel = keep the current access`);
-    const r = await rpc('sa_web_payment_void', { ...revCreds(), p_id: p.id, p_reason: reason.trim(), p_revert_access: revert });
+    let r = await rpc('sa_web_payment_void', { ...revCreds(), p_id: p.id, p_reason: reason.trim(), p_revert_access: revert });
     if (revAuthFail(r)) return;
+    if (revert && r && !r.ok && /cannot be reverted/i.test(r.error || '')){
+      // A later recharge or a manual change moved the end date — offer to void and leave access as it is
+      if (!confirm(`The institute's access cannot be moved back automatically, because a later recharge or a manual change has already set its end date.\n\nVoid payment #${p.id} and keep the current access?\n(You can change the end date yourself from the institute's card.)`)) return;
+      r = await rpc('sa_web_payment_void', { ...revCreds(), p_id: p.id, p_reason: reason.trim(), p_revert_access: false });
+      if (revAuthFail(r)) return;
+    }
     if (r && r.ok){ toast(r.access_reverted ? 'Payment voided and access moved back.' : 'Payment voided.', 'ok'); loadRevenue(); loadList(); }
     else toast((r && r.error) || 'Unable to void the payment.', 'err');
   } else {
@@ -2459,7 +2479,7 @@ async function raLoad(){
   if (revAuthFail(r)) return;
   if (!r || !r.ok){ $('ra-status').innerHTML = `<p class="muted" style="margin:0;">${esc((r && r.error) || 'Unable to load.')}</p>`; return; }
   raData = r;
-  raRenderStatus(); raRenderPending(); raRenderEx();
+  raRenderStatus(); raRenderPending(); raRenderEx(); loadAuditAlerts();
   bkLoadLines(); bkLoadStatements(); raLoadMonths();
 }
 
@@ -2829,6 +2849,32 @@ $('bk-stmts').addEventListener('click', async e => {
   const r = await rpc('sa_web_bank_statement_delete', { ...revCreds(), p_id: Number(b.dataset.id), p_reason: reason.trim() });
   if (revAuthFail(r)) return;
   if (r && r.ok){ toast('Statement removed.', 'ok'); raLoad(); } else toast((r && r.error) || 'Unable to remove.', 'err');
+});
+
+/* ---- Audit alerts on the home screen (no amounts; red = something is wrong) ---- */
+var raPendingOpen = null, alData = [];
+async function loadAuditAlerts(){
+  if (!sa) return;
+  let r = null;
+  try{ r = await rpc('sa_web_audit_alerts', creds()); }catch(_e){ return; }
+  if (!r || !r.ok){ $('audit-alerts').innerHTML = ''; return; }
+  alData = r.alerts || [];
+  $('audit-alerts').innerHTML = alData.map((a, i) => `<button type="button" class="al-bar ${a.level}" data-i="${i}">
+      <span class="al-ic">${a.level === 'critical' ? '🔴' : '🟠'}</span>
+      <span><b>${a.level === 'critical' ? 'Audit alert' : 'Needs attention'}:</b> ${esc(a.text)}</span>
+      <span class="al-go">${a.go === 'audit' ? 'Open Audit' : 'Open Revenue audit'} →</span></button>`).join('');
+  const red = alData.some(a => a.level === 'critical');
+  const rb = document.querySelector('.sec-btn[data-sec="rev-box"]'); if (rb) rb.classList.toggle('al-red', red && alData.some(a => a.level === 'critical' && a.go === 'ra'));
+  const ab = document.querySelector('.sec-btn[data-sec="audit-box"]'); if (ab) ab.classList.toggle('al-red', alData.some(a => a.code === 'CHAIN'));
+  const tb = document.querySelector('.rev-tab[data-tab="ra"]'); if (tb) tb.classList.toggle('al-red', red);
+}
+$('audit-alerts').addEventListener('click', e => {
+  const b = e.target.closest('.al-bar'); if (!b) return;
+  const a = alData[Number(b.dataset.i)]; if (!a) return;
+  if (a.go === 'audit'){ openSection('audit-box', true); return; }
+  openSection('rev-box', true);
+  if (revPin){ showRevTab('ra'); if (a.month) $('ra-month').value = a.month; raLoad(); }
+  else { raPendingOpen = { month: a.month || null }; toast('Enter your revenue PIN — Revenue audit opens next.'); }
 });
 
 /* ---- Monthly audit report (print / save as PDF) ---- */
