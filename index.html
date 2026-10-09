@@ -135,6 +135,16 @@
   .mchip i{ width:10px; height:10px; border-radius:3px; display:inline-block; } .chart .bar.none{ background:transparent; border:1px dashed var(--line-soft); height:30px; }
   .chart .v{ font-size:10.5px; color:var(--text-dim); margin-bottom:3px; white-space:nowrap; }
   .chart .l{ font-size:10.5px; color:var(--text-dim); margin-top:4px; white-space:nowrap; }
+  .ra-top{ display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-top:12px; }
+  .ra-top input[type=month]{ width:auto; min-width:180px; }
+  .ra-status{ margin-top:12px; } .ra-st-row{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+  .ra-block{ margin:4px 0 0; padding-left:18px; color:#f5b041; }
+  .ra-h{ margin:22px 0 4px; font-size:15px; display:flex; gap:8px; align-items:center; } .ra-sub{ font-size:12px; margin:0 0 6px; }
+  table.report td.ra-wrap{ white-space:normal; text-align:left; min-width:180px; max-width:340px; font-size:12.5px; }
+  .ra-note{ font-size:12.5px; color:var(--accent-text); }
+  .bk-cands{ display:flex; flex-direction:column; gap:4px; margin-top:6px; } .bk-cands .btn{ padding:4px 8px; font-size:12px; text-align:left; }
+  .btn[disabled]{ opacity:.45; cursor:not-allowed; }
+  @media (max-width:700px){ .kpis{ grid-template-columns:repeat(2, 1fr); } }
   .ren-buckets{ display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; margin:12px 0; }
   .ren-chip{ background:var(--field); border:1px solid var(--line-soft); border-radius:12px; padding:10px; color:var(--text); font:inherit; cursor:pointer; text-align:left; }
   .ren-chip span{ display:block; font-size:12px; color:var(--text-dim); } .ren-chip b{ display:block; font-size:20px; margin:2px 0; }
@@ -478,6 +488,7 @@
             <button class="rev-tab" data-tab="ren">Renewals</button>
             <button class="rev-tab" data-tab="pays">Payments</button>
             <button class="rev-tab" data-tab="plans">Plans &amp; pricing</button>
+            <button class="rev-tab" data-tab="ra">🛡 Revenue audit</button>
             <button class="rev-tab" data-tab="audit">Audit log</button>
           </div>
 
@@ -645,6 +656,76 @@
             </div>
             <p class="muted" style="font-size:12px; margin:8px 0 0;">Changing a price affects future payments only; recorded payments keep their amounts.</p>
           </div>
+          </div>
+
+          <div class="rev-pane hidden" data-pane="ra">
+            <div class="ra-top">
+              <div><label>Month</label><input type="month" id="ra-month"></div>
+              <div class="btn-row" style="margin:0; align-self:flex-end;">
+                <button class="btn btn-primary" id="btn-ra-load">🔄 Load</button>
+                <button class="btn" id="btn-ra-report">📄 Monthly audit report</button>
+              </div>
+            </div>
+
+            <div class="card ra-status" id="ra-status"><p class="muted" style="margin:0;">Choose a month and press Load.</p></div>
+
+            <div class="kpis" id="ra-kpis"></div>
+
+            <h4 class="ra-h">✅ Waiting for verification <span class="pill grey" id="ra-pend-n">0</span></h4>
+            <p class="muted ra-sub">Payments recorded without the revenue PIN. Check the money has arrived, then verify. Rejecting voids the payment and, if it is the latest recharge, moves the institute's access back.</p>
+            <div class="report-wrap" id="ra-pending"></div>
+
+            <h4 class="ra-h">🚩 Red flags and checks</h4>
+            <div class="fchips" id="ra-ex-chips">
+              <button class="fchip on" data-f="open">Needs review</button>
+              <button class="fchip" data-f="reviewed">Reviewed</button>
+              <button class="fchip" data-f="info">Voids &amp; refunds</button>
+              <button class="fchip" data-f="all">All</button>
+            </div>
+            <div class="report-wrap" id="ra-ex"></div>
+
+            <h4 class="ra-h">🏦 Bank / UPI statement matching</h4>
+            <p class="muted ra-sub">Download the statement of the account where Dhyeodaya payments arrive (bank or UPI business app) as a CSV file and import it here. Payments are matched by UTR / UPI transaction ID, or by amount and date.</p>
+            <div class="card" style="margin-top:8px;">
+              <div class="grid">
+                <div><label>Account name</label><input id="bk-label" maxlength="60" placeholder="e.g. HDFC current account"></div>
+                <div><label>Statement file (.csv)</label><input id="bk-file" type="file" accept=".csv,text/csv"></div>
+              </div>
+              <div id="bk-map" class="hidden">
+                <div class="grid">
+                  <div><label>Date column</label><select class="sel" id="bk-c-date" style="width:100%;"></select></div>
+                  <div><label>Credit / deposit column</label><select class="sel" id="bk-c-credit" style="width:100%;"></select></div>
+                  <div><label>Debit / withdrawal column (optional)</label><select class="sel" id="bk-c-debit" style="width:100%;"></select></div>
+                  <div><label>Cr / Dr column (optional)</label><select class="sel" id="bk-c-type" style="width:100%;"></select></div>
+                  <div><label>Reference / UTR column</label><select class="sel" id="bk-c-ref" style="width:100%;"></select></div>
+                  <div><label>Description column</label><select class="sel" id="bk-c-desc" style="width:100%;"></select></div>
+                  <div><label>Date format</label>
+                    <select class="sel" id="bk-dfmt" style="width:100%;">
+                      <option value="dmy">DD-MM-YYYY (India)</option><option value="mdy">MM-DD-YYYY</option><option value="ymd">YYYY-MM-DD</option>
+                    </select></div>
+                </div>
+                <div class="muted" id="bk-preview" style="margin-top:10px; font-size:13px;"></div>
+                <div class="err" id="bk-err"></div>
+                <button class="btn btn-primary" id="btn-bk-import" style="margin-top:8px;">Import credits</button>
+              </div>
+            </div>
+            <div class="fchips" id="bk-chips" style="margin-top:6px;">
+              <button class="fchip on" data-f="unmatched">Not matched</button>
+              <button class="fchip" data-f="suggested">Suggested</button>
+              <button class="fchip" data-f="matched">Matched</button>
+              <button class="fchip" data-f="ignored">Ignored</button>
+              <button class="fchip" data-f="">All</button>
+              <button class="btn" id="btn-bk-rematch" style="margin-left:auto; padding:5px 12px; font-size:12.5px;">↻ Auto-match again</button>
+            </div>
+            <div class="report-wrap" id="bk-lines"></div>
+            <details style="margin-top:10px;">
+              <summary>Imported statements</summary>
+              <div class="report-wrap" id="bk-stmts"></div>
+            </details>
+
+            <h4 class="ra-h">🔒 Closed months</h4>
+            <p class="muted ra-sub">A closed month is locked: its payments cannot be changed or voided, and corrections are made in an open month (for example as a refund). The fingerprint proves the figures have not changed since closing.</p>
+            <div class="report-wrap" id="ra-months"></div>
           </div>
 
           <div class="rev-pane hidden" data-pane="audit">
@@ -883,7 +964,12 @@ async function rpc(fn, body){
     headers:{ 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json' },
     body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  if (!res.ok){
+    // A database rule (e.g. closed month) explains itself — show its message instead of a generic failure
+    let j = null; try{ j = await res.json(); }catch(_e){}
+    if (j && j.code === 'P0001' && j.message) return { ok: false, error: j.message };
+    throw new Error(`Request failed (${res.status})`);
+  }
   return res.json();
 }
 function creds(){ return { p_username: sa.u, p_password: sa.p }; }
@@ -1657,7 +1743,7 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-10-04.1';
+const APP_VERSION = '2026-10-09.1';
 let updShown = false;
 async function checkForUpdate(){
   try{
@@ -1804,7 +1890,8 @@ $('btn-rp-save').addEventListener('click', async () => {
     if (handleAuthError(r)) return;
     if (r && r.ok){
       $('rp-ok').innerHTML = `<div class="card" style="margin:10px 0 0; border-color:var(--accent);"><b>✅ Payment recorded successfully.</b>
-        <div class="muted" style="margin-top:6px; font-size:13px;">Payment ID #${r.id} · ${esc(r.institute)} · ${inr(r.amount)} · ${esc(r.plan || '—')}${r.access_until ? ' · new paid until ' + dmy(r.access_until) : ''}${r.duplicate ? ' · (already saved earlier)' : ''}</div></div>`;
+        <div class="muted" style="margin-top:6px; font-size:13px;">Payment ID #${r.id} · ${esc(r.institute)} · ${inr(r.amount)} · ${esc(r.plan || '—')}${r.access_until ? ' · new paid until ' + dmy(r.access_until) : ''}${r.duplicate ? ' · (already saved earlier)' : ''}</div>
+        ${r.verification === 'pending' ? '<div class="muted" style="margin-top:4px; font-size:12.5px;">🕓 Sent to the founder for verification.</div>' : ''}</div>`;
       receiptAfterSave(r, 'rp-ok');
       rpKey = newPayKey(); $('rp-ref').value = ''; $('rp-note').value = '';
       await loadList();
@@ -1989,7 +2076,7 @@ function revCreds(){ return { p_username: sa.u, p_password: sa.p, p_pin: revPin 
 function revTouch(){ clearTimeout(revTimer); revTimer = setTimeout(() => { revLock(); toast('Revenue locked after 10 minutes of inactivity.'); }, 10 * 60 * 1000); }
 function revLock(){
   if ($('au-open')){ $('au-open').classList.add('hidden'); $('au-locked').classList.remove('hidden'); }
-  revPin = null; revData = null; clearTimeout(revTimer);
+  revPin = null; revData = null; clearTimeout(revTimer); raData = null;
   $('rev-open').classList.add('hidden'); $('rev-locked').classList.remove('hidden');
   $('rev-chpin-box').classList.add('hidden');
   ['rev-pin','rev-setup-pass','rev-setup-pin','rev-setup-pin2','chpin-old','chpin-new','chpin-new2'].forEach(id => { $(id).value = ''; });
@@ -2351,11 +2438,500 @@ $('rev-payments').addEventListener('click', async (e) => {
   }
 });
 
+/* ================= REVENUE AUDIT ================= */
+const RA_SEV = { high: ['High', 'expired'], medium: ['Medium', 'warn'], low: ['Low', 'blue'], info: ['Info', 'grey'] };
+var raSeq = 0, raData = null, raExFilter = 'open', bkFilter = 'unmatched', bkLinesData = [], bkParsed = null;
+function raMonth(){ return ($('ra-month').value || isoToday().slice(0, 7)) + '-01'; }
+function raMonthName(m){ return new Date(m + 'T00:00:00').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }); }
+function short(h){ return h ? h.slice(0, 12) + '…' + h.slice(-6) : '—'; }
+function dtm(t){ return t ? new Date(t).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'; }
+
+async function raLoad(){
+  if (!revPin) return; revTouch();
+  if (!$('ra-month').value){
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);   // default: last month (the one to close)
+    $('ra-month').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+  $('ra-status').innerHTML = '<p class="muted" style="margin:0;">Loading...</p>';
+  const my = ++raSeq;
+  const r = await rpc('sa_web_rev_audit', { ...revCreds(), p_month: raMonth() });
+  if (my !== raSeq) return;            // a newer load has started
+  if (revAuthFail(r)) return;
+  if (!r || !r.ok){ $('ra-status').innerHTML = `<p class="muted" style="margin:0;">${esc((r && r.error) || 'Unable to load.')}</p>`; return; }
+  raData = r;
+  raRenderStatus(); raRenderPending(); raRenderEx();
+  bkLoadLines(); bkLoadStatements(); raLoadMonths();
+}
+
+function raRenderStatus(){
+  const r = raData, p = r.period, t = r.totals, name = raMonthName(r.month);
+  const open = r.exceptions.filter(e => e.gating && !e.review && e.code !== 'UNVERIFIED' && (e.severity === 'high' || e.severity === 'medium'));
+  const hi = open.filter(e => e.severity === 'high').length;
+  let pill, info;
+  if (p.status === 'closed'){
+    pill = p.intact ? '<span class="pill active">🔒 Closed · unchanged</span>' : '<span class="pill expired">⚠ Closed · figures changed after closing</span>';
+    info = `Closed by <b>${esc(p.closed_by)}</b> on ${dtm(p.closed_at)}${p.close_note ? ' · “' + esc(p.close_note) + '”' : ''}<br>
+      <span class="muted">Fingerprint ${esc(short(p.snapshot_hash))}${p.close_count > 1 ? ` · closed ${p.close_count} times (last reopened by ${esc(p.reopened_by)}: “${esc(p.reopen_reason || '')}”)` : ''}</span>`;
+  } else {
+    pill = '<span class="pill warn">Open</span>';
+    info = r.blockers.length
+      ? '<b>Before closing:</b><ul class="ra-block">' + r.blockers.map(b => `<li>${esc(b)}</li>`).join('') + '</ul>'
+      : '<span style="color:var(--accent-text);">✓ All checks are done. The month is ready to close.</span>';
+    if (p.reopened_at) info += `<br><span class="muted">Reopened by ${esc(p.reopened_by)} on ${dtm(p.reopened_at)}: “${esc(p.reopen_reason || '')}”</span>`;
+  }
+  $('ra-status').innerHTML = `<div class="ra-st-row"><div><div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <b style="font-size:17px;">${esc(name)}</b> ${pill}</div><div style="margin-top:6px; font-size:13px;">${info}</div></div>
+    <div class="btn-row" style="margin:0;">${p.status === 'closed'
+      ? '<button class="btn btn-danger" id="btn-ra-reopen">Reopen month</button>'
+      : `<button class="btn btn-primary" id="btn-ra-close" ${r.blockers.length ? 'disabled' : ''}>🔒 Close the books</button>`}</div></div>`;
+  const b = r.bank;
+  $('ra-kpis').innerHTML = `
+    <div class="kpi" title="Payments in the month (void excluded) minus refunds made in the month."><span class="kl">Net collected</span><b>${inr(t.net)}</b><span class="kc">Gross ${inr(t.gross)} · refunds ${inr(t.refunds)}</span></div>
+    <div class="kpi" title="Payments dated in this month."><span class="kl">Payments</span><b>${t.payments}</b><span class="kc">${t.verified} verified · ${t.pending} waiting${t.voids ? ' · ' + t.voids + ' void' : ''}</span></div>
+    <div class="kpi" title="High and medium red flags that need a review note before the month can be closed."><span class="kl">Red flags to review</span><b style="color:${open.length ? '#f5b041' : 'var(--accent-text)'}">${open.length}</b><span class="kc">${hi} high · ${open.length - hi} medium</span></div>
+    <div class="kpi" title="Credits from imported bank / UPI statements dated in this month."><span class="kl">Bank entries matched</span><b>${b.lines ? b.matched + ' / ' + b.lines : '—'}</b><span class="kc">${b.covered ? `${b.unmatched} not matched · ${b.suggested} suggested · ${b.ignored} ignored` : 'No statement imported for this month'}</span></div>`;
+}
+
+function raRenderPending(){
+  const rows = raData.pending;
+  $('ra-pend-n').textContent = rows.length;
+  $('ra-pending').innerHTML = rows.length ? `<table class="report"><thead><tr><th>Payment</th><th>Institute</th><th class="num">Amount</th><th>Method / reference</th><th>Recorded by</th><th>Bank</th><th></th></tr></thead><tbody>` +
+    rows.map(p => `<tr><td>#${p.id} · ${dmy(p.paid_on)}${p.receipt_no ? `<br><span class="muted" style="font-size:11.5px;">${esc(p.receipt_no)}</span>` : ''}</td>
+      <td style="text-align:left;">${esc(p.inst_name)}<br><span class="muted" style="font-size:11.5px;">${esc(p.plan || '—')}${p.months ? ' · ' + p.months + ' mo' : ''}</span></td>
+      <td class="num"><b>${inr(p.amount)}</b></td>
+      <td style="text-align:left;">${esc(p.method)}${p.reference ? `<br><span class="muted" style="font-size:11.5px;">${esc(p.reference)}</span>` : ''}${p.note ? `<br><span class="muted" style="font-size:11.5px;">${esc(p.note)}</span>` : ''}</td>
+      <td>${esc(p.recorded_by || '—')}<br><span class="muted" style="font-size:11.5px;">${dtm(p.recorded_at)}</span></td>
+      <td>${p.bank ? (p.bank.status === 'matched' ? '<span class="pill active">✓ In bank</span>' : '<span class="pill blue">Suggested</span>') : (p.method === 'Cash' ? '<span class="pill grey">Cash</span>' : '<span class="pill grey">Not checked</span>')}</td>
+      <td>${p.month_closed ? '<span class="muted">Month closed</span>' : `<button class="btn ra-ver" data-id="${p.id}" style="padding:5px 10px;">✓ Verify</button> <button class="btn btn-danger ra-rej" data-id="${p.id}" style="padding:5px 10px;">✕ Reject</button>`}</td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted">Nothing is waiting for verification. 👍</p>';
+}
+
+function raRenderEx(){
+  const all = raData.exceptions;
+  const f = raExFilter;
+  const rows = all.filter(e => f === 'all' ? true : f === 'info' ? e.severity === 'info'
+    : f === 'reviewed' ? !!e.review : (e.severity !== 'info' && !e.review));
+  const n = { open: all.filter(e => e.severity !== 'info' && !e.review).length, reviewed: all.filter(e => e.review).length,
+              info: all.filter(e => e.severity === 'info').length, all: all.length };
+  document.querySelectorAll('#ra-ex-chips .fchip').forEach(c => { c.textContent = c.textContent.replace(/ \(\d+\)$/, '') + ` (${n[c.dataset.f]})`; });
+  $('ra-ex').innerHTML = rows.length ? `<table class="report ra-ex"><thead><tr><th>Level</th><th>Check</th><th>Institute</th><th class="num">Amount</th><th>Review</th></tr></thead><tbody>` +
+    rows.map(e => {
+      const s = RA_SEV[e.severity] || ['—', 'grey'];
+      const canNote = e.code !== 'UNVERIFIED' && e.severity !== 'info';
+      const rev = e.review
+        ? `<div class="ra-note">✓ ${esc(e.review.note)}<br><span class="muted" style="font-size:11px;">${esc(e.review.by)} · ${dtm(e.review.at)}</span></div>
+           ${raData.period.status !== 'closed' ? `<button class="btn ra-unrev" data-key="${esc(e.key)}" data-code="${esc(e.code)}" style="padding:3px 8px; font-size:11.5px; margin-top:4px;">Remove note</button>` : ''}`
+        : e.code === 'UNVERIFIED' ? '<span class="muted">Verify above</span>'
+        : canNote ? `<button class="btn ra-rev" data-key="${esc(e.key)}" data-code="${esc(e.code)}" style="padding:5px 10px;">✎ Add note</button>` : '';
+      return `<tr><td><span class="pill ${s[1]}">${s[0]}</span></td>
+        <td class="ra-wrap" style="min-width:240px;"><b>${esc(e.title)}</b> <span class="muted" style="font-size:11.5px;">${e.payment_id ? '#' + e.payment_id + ' · ' : ''}${dmy(e.date)}</span><br><span style="font-size:12px; color:var(--text-dim);">${esc(e.detail)}</span></td>
+        <td style="text-align:left;">${esc(e.inst_name || '—')}</td><td class="num">${e.amount === null ? '—' : inr(e.amount)}</td>
+        <td class="ra-wrap" style="min-width:150px;">${rev}</td></tr>`;
+    }).join('') + '</tbody></table>'
+    : `<p class="muted">${f === 'open' ? 'No red flags need review. ✓' : 'Nothing here.'}</p>`;
+}
+
+$('btn-ra-load').addEventListener('click', raLoad);
+$('ra-month').addEventListener('change', raLoad);
+document.querySelector('.rev-tab[data-tab="ra"]').addEventListener('click', () => { if (!raData) raLoad(); });
+$('ra-ex-chips').addEventListener('click', e => {
+  const c = e.target.closest('.fchip'); if (!c || !raData) return;
+  raExFilter = c.dataset.f;
+  document.querySelectorAll('#ra-ex-chips .fchip').forEach(x => x.classList.toggle('on', x === c));
+  raRenderEx();
+});
+
+$('ra-pending').addEventListener('click', async e => {
+  const vb = e.target.closest('.ra-ver'), rb = e.target.closest('.ra-rej');
+  if (!vb && !rb) return; revTouch();
+  const p = raData.pending.find(x => String(x.id) === (vb || rb).dataset.id); if (!p) return;
+  let note = null;
+  if (vb){
+    note = prompt(`VERIFY payment #${p.id}\n${p.inst_name} · ${inr(p.amount)} · ${p.method}${p.reference ? ' · ' + p.reference : ''}\n\nConfirm that this money has been received.\nNote (optional):`, p.bank && p.bank.status === 'matched' ? 'Matched in bank statement' : '');
+    if (note === null) return;
+  } else {
+    note = prompt(`REJECT payment #${p.id}\n${p.inst_name} · ${inr(p.amount)}\n\nUse this when the money was NOT received. The payment will be voided and its receipt cancelled.\n\nReason:`);
+    if (note === null) return;
+    if (note.trim().length < 3){ toast('Please give a reason (at least 3 characters).', 'err'); return; }
+    if (!confirm(`Reject and void payment #${p.id} of ${inr(p.amount)}?`)) return;
+  }
+  const r = await rpc('sa_web_payment_verify', { ...revCreds(), p_id: p.id, p_decision: vb ? 'verify' : 'reject', p_note: note.trim() || null });
+  if (revAuthFail(r)) return;
+  if (r && r.ok){ toast(vb ? 'Payment verified.' : (r.access_reverted ? 'Payment rejected and access moved back.' : 'Payment rejected (voided).'), 'ok'); raLoad(); if (!vb) loadList(); }
+  else toast((r && r.error) || 'Unable to save.', 'err');
+});
+
+$('ra-ex').addEventListener('click', async e => {
+  const ab = e.target.closest('.ra-rev'), ub = e.target.closest('.ra-unrev');
+  if (!ab && !ub) return; revTouch();
+  const b = ab || ub;
+  let note = null;
+  if (ab){
+    note = prompt('Explain this item for the audit record (e.g. “Discount agreed for first 3 months”, “Entered late — payment confirmed on bank statement”):');
+    if (note === null) return;
+    if (note.trim().length < 3){ toast('Please write a short explanation.', 'err'); return; }
+  } else if (!confirm('Remove this review note?')) return;
+  const r = await rpc('sa_web_rev_exception_review', { ...revCreds(), p_key: b.dataset.key, p_code: b.dataset.code, p_note: note, p_clear: !!ub });
+  if (revAuthFail(r)) return;
+  if (r && r.ok){ toast(ab ? 'Note saved.' : 'Note removed.', 'ok'); raLoad(); }
+  else toast((r && r.error) || 'Unable to save.', 'err');
+});
+
+$('ra-status').addEventListener('click', async e => {
+  if (e.target.id === 'btn-ra-close'){
+    revTouch();
+    const t = raData.totals, name = raMonthName(raData.month);
+    const note = prompt(`CLOSE THE BOOKS for ${name}\n\nNet collected: ${inr(t.net)} (${t.payments} payments)\n\nAfter closing, payments of ${name} cannot be changed or voided. Corrections are made in an open month.\n\nNote (optional):`, '');
+    if (note === null) return;
+    const r = await rpc('sa_web_rev_month_close', { ...revCreds(), p_month: raData.month, p_note: note.trim() || null });
+    if (revAuthFail(r)) return;
+    if (r && r.ok){ toast(`${name} closed.`, 'ok'); raLoad(); }
+    else toast((r && r.blockers ? r.blockers.join(' ') : (r && r.error)) || 'Unable to close.', 'err');
+  } else if (e.target.id === 'btn-ra-reopen'){
+    revTouch();
+    const reason = prompt(`REOPEN ${raMonthName(raData.month)}\n\nReopening is recorded in the audit trail. Close the month again after the correction.\n\nReason:`);
+    if (reason === null) return;
+    if (reason.trim().length < 5){ toast('Please give a reason (at least 5 characters).', 'err'); return; }
+    const r = await rpc('sa_web_rev_month_reopen', { ...revCreds(), p_month: raData.month, p_reason: reason.trim() });
+    if (revAuthFail(r)) return;
+    if (r && r.ok){ toast('Month reopened.', 'ok'); raLoad(); }
+    else toast((r && r.error) || 'Unable to reopen.', 'err');
+  }
+});
+
+async function raLoadMonths(){
+  const r = await rpc('sa_web_rev_months', revCreds());
+  if (revAuthFail(r)) return;
+  if (!r || !r.ok){ $('ra-months').innerHTML = '<p class="muted">Unable to load.</p>'; return; }
+  $('ra-months').innerHTML = r.months.length ? `<table class="report"><thead><tr><th>Month</th><th>Status</th><th class="num">Net</th><th class="num">Payments</th><th>Closed by</th><th>Fingerprint</th><th>Check</th></tr></thead><tbody>` +
+    r.months.map(m => `<tr><td><a href="#" class="ra-goto" data-m="${m.month.slice(0, 7)}">${esc(raMonthName(m.month))}</a></td>
+      <td>${m.status === 'closed' ? '<span class="pill active">Closed</span>' : '<span class="pill warn">Reopened</span>'}</td>
+      <td class="num">${m.net === null ? '—' : inr(m.net)}</td><td class="num">${m.payments ?? '—'}</td>
+      <td>${esc(m.closed_by || '—')}<br><span class="muted" style="font-size:11.5px;">${dtm(m.closed_at)}</span></td>
+      <td><code style="font-size:11.5px;">${esc(short(m.hash))}</code></td>
+      <td>${m.status !== 'closed' ? '—' : m.intact ? '<span class="pill active">✓ Unchanged</span>' : '<span class="pill expired">⚠ Changed</span>'}</td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted">No month has been closed yet.</p>';
+}
+$('ra-months').addEventListener('click', e => {
+  const a = e.target.closest('.ra-goto'); if (!a) return; e.preventDefault();
+  $('ra-month').value = a.dataset.m; raLoad(); $('ra-status').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+/* ---- Bank / UPI statement ---- */
+function csvRows(text){
+  text = text.replace(/^\uFEFF/, '');
+  const sample = text.split(/\r?\n/).slice(0, 30).join('\n');
+  const cnt = c => sample.split(c).length;
+  const delim = [',', ';', '\t'].sort((a, b) => cnt(b) - cnt(a))[0];
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if (q){
+      if (ch === '"'){ if (text[i + 1] === '"'){ cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === delim){ row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r'){ if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += ch;
+  }
+  if (cell !== '' || row.length){ row.push(cell); rows.push(row); }
+  return rows.map(r => r.map(c => c.trim())).filter(r => r.some(c => c !== ''));
+}
+const MONTHS3 = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+function bkDate(s, fmt){
+  s = String(s || '').trim();
+  let m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  let y, mo, d;
+  if (m){ y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = s.match(/^(\d{1,2})[-\/. ]([A-Za-z]{3})[A-Za-z]*[-\/. ,]+(\d{2,4})/))){ d = +m[1]; mo = MONTHS3[m[2].toLowerCase()]; y = +m[3]; }
+  else if ((m = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/))){
+    if (fmt === 'mdy'){ mo = +m[1]; d = +m[2]; } else { d = +m[1]; mo = +m[2]; }
+    y = +m[3];
+  } else return null;
+  if (y < 100) y += 2000;
+  if (!mo || mo > 12 || !d || d > 31) return null;
+  const iso = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  return isNaN(new Date(iso).getTime()) ? null : iso;
+}
+function bkNum(s){
+  s = String(s || '').replace(/[₹,\s]/g, '').replace(/(INR|Rs\.?)/ig, '');
+  let neg = false;
+  if (/^\(.*\)$/.test(s)){ neg = true; s = s.slice(1, -1); }
+  if (/cr$/i.test(s)) s = s.slice(0, -2); else if (/dr$/i.test(s)){ neg = true; s = s.slice(0, -2); }
+  const n = parseFloat(s); if (isNaN(n)) return null;
+  return neg ? -Math.abs(n) : n;
+}
+function bkFindHeader(rows){
+  for (let i = 0; i < Math.min(rows.length, 40); i++){
+    const r = rows[i].map(c => c.toLowerCase());
+    if (r.some(c => /date/.test(c)) && r.some(c => /(credit|deposit|amount|cr\b)/.test(c))) return i;
+  }
+  return -1;
+}
+function bkGuess(head, re, not){ const i = head.findIndex(h => re.test(h) && !(not && not.test(h))); return i; }
+$('bk-file').addEventListener('change', async () => {
+  $('bk-err').textContent = ''; bkParsed = null;
+  const f = $('bk-file').files[0]; if (!f) return;
+  if (!/\.csv$/i.test(f.name)){ $('bk-map').classList.remove('hidden'); $('bk-err').textContent = 'Please save the statement as a CSV file (in Excel: File → Save As → CSV) and choose that file.'; return; }
+  if (f.size > 3 * 1024 * 1024){ $('bk-err').textContent = 'The file is too large (max 3 MB).'; return; }
+  const rows = csvRows(await f.text());
+  const hi = bkFindHeader(rows);
+  if (hi < 0){ $('bk-map').classList.remove('hidden'); $('bk-err').textContent = 'Could not find the column headings (Date, Credit / Amount) in this file.'; return; }
+  const head = rows[hi].map(h => h.toLowerCase());
+  bkParsed = { name: f.name, head: rows[hi], data: rows.slice(hi + 1) };
+  const opts = '<option value="-1">— none —</option>' + rows[hi].map((h, i) => `<option value="${i}">${esc(h || 'Column ' + (i + 1))}</option>`).join('');
+  ['bk-c-date', 'bk-c-credit', 'bk-c-debit', 'bk-c-type', 'bk-c-ref', 'bk-c-desc'].forEach(id => { $(id).innerHTML = opts; });
+  let dateI = bkGuess(head, /(txn|tran|transaction).*date|^date$/); if (dateI < 0) dateI = bkGuess(head, /date/, /value/); if (dateI < 0) dateI = bkGuess(head, /date/);
+  let crI = bkGuess(head, /(credit|deposit)/); if (crI < 0) crI = bkGuess(head, /amount/);
+  $('bk-c-date').value = dateI; $('bk-c-credit').value = crI;
+  $('bk-c-debit').value = bkGuess(head, /(debit|withdraw)/);
+  $('bk-c-type').value = bkGuess(head, /(dr\s*\/\s*cr|cr\s*\/\s*dr|^type$|txn type|transaction type)/);
+  $('bk-c-ref').value = bkGuess(head, /(utr|ref|cheque|chq|transaction id|txn id|upi)/, /date/);
+  $('bk-c-desc').value = bkGuess(head, /(narration|description|particulars|remarks|details)/);
+  if (!$('bk-label').value.trim()) $('bk-label').value = f.name.replace(/\.csv$/i, '').slice(0, 60);
+  $('bk-map').classList.remove('hidden');
+  bkPreview();
+});
+['bk-c-date', 'bk-c-credit', 'bk-c-debit', 'bk-c-type', 'bk-c-ref', 'bk-c-desc', 'bk-dfmt'].forEach(id => $(id).addEventListener('change', bkPreview));
+function bkCollect(){
+  if (!bkParsed) return null;
+  const c = id => Number($(id).value);
+  const di = c('bk-c-date'), ci = c('bk-c-credit'), dbi = c('bk-c-debit'), ti = c('bk-c-type'), ri = c('bk-c-ref'), ni = c('bk-c-desc');
+  if (di < 0 || ci < 0) return { err: 'Please choose the date and credit columns.' };
+  const fmt = $('bk-dfmt').value; const out = []; let dates = [], bad = 0, debits = 0;
+  for (const r of bkParsed.data){
+    const d = bkDate(r[di], fmt); if (!d){ if (r[di] && /\d/.test(r[di])) bad++; continue; }
+    dates.push(d);
+    let a = bkNum(r[ci]);
+    if (ti >= 0 && /^d/i.test(r[ti] || '')){ debits++; continue; }
+    if (dbi >= 0 && dbi !== ci && bkNum(r[dbi]) && !(a > 0)){ debits++; continue; }
+    if (!(a > 0)){ if (a < 0) debits++; continue; }
+    out.push({ date: d, amount: Math.round(a * 100) / 100, reference: ri >= 0 ? (r[ri] || '') : '', narration: ni >= 0 ? (r[ni] || '') : '' });
+  }
+  dates.sort();
+  return { rows: out, from: dates[0] || null, to: dates[dates.length - 1] || null, bad, debits };
+}
+function bkPreview(){
+  $('bk-err').textContent = '';
+  const x = bkCollect(); if (!x) return;
+  if (x.err){ $('bk-preview').textContent = ''; $('bk-err').textContent = x.err; return; }
+  const tot = x.rows.reduce((s, r) => s + r.amount, 0);
+  $('bk-preview').innerHTML = x.rows.length
+    ? `<b>${x.rows.length}</b> credit entries · total <b>${inr(tot)}</b> · ${dmy(x.from)} to ${dmy(x.to)}${x.debits ? ` · ${x.debits} debits skipped` : ''}${x.bad ? ` · <span style="color:#f5b041;">${x.bad} rows with an unreadable date — check the date format</span>` : ''}
+       <div class="muted" style="font-size:12px; margin-top:4px;">First entry: ${esc(dmy(x.rows[0].date))} · ${inr(x.rows[0].amount)} · ${esc((x.rows[0].reference + ' ' + x.rows[0].narration).trim().slice(0, 80))}</div>`
+    : 'No credit entries found with these columns.';
+}
+$('btn-bk-import').addEventListener('click', async () => {
+  revTouch(); $('bk-err').textContent = '';
+  const x = bkCollect(); if (!x || x.err || !x.rows.length){ $('bk-err').textContent = (x && x.err) || 'No credit entries to import.'; return; }
+  if (!$('bk-label').value.trim()){ $('bk-err').textContent = 'Please name the account.'; return; }
+  const b = $('btn-bk-import'); b.disabled = true; b.textContent = 'Importing...';
+  try{
+    const r = await rpc('sa_web_bank_import', { ...revCreds(), p_label: $('bk-label').value.trim(), p_file_name: bkParsed.name,
+      p_rows: x.rows, p_period_from: x.from, p_period_to: x.to });
+    if (revAuthFail(r)) return;
+    if (r && r.ok){
+      toast(`Imported ${r.imported} entries · ${r.matched} matched · ${r.suggested} suggested${r.duplicates ? ' · ' + r.duplicates + ' already imported' : ''}.`, 'ok');
+      $('bk-file').value = ''; $('bk-map').classList.add('hidden'); bkParsed = null; raLoad();
+    } else $('bk-err').textContent = (r && r.error) || 'Unable to import.';
+  } catch(_e){ $('bk-err').textContent = 'Connection error. Please try again.'; }
+  finally{ b.disabled = false; b.textContent = 'Import credits'; }
+});
+async function bkLoadLines(){
+  const r = await rpc('sa_web_bank_lines', { ...revCreds(), p_status: bkFilter || null, p_from: null, p_to: null });
+  if (revAuthFail(r)) return;
+  if (!r || !r.ok){ $('bk-lines').innerHTML = '<p class="muted">Unable to load.</p>'; return; }
+  bkLinesData = r.lines;
+  const ST = { unmatched: ['Not matched', 'warn'], suggested: ['Suggested', 'blue'], matched: ['Matched', 'active'], ignored: ['Ignored', 'grey'] };
+  $('bk-lines').innerHTML = r.lines.length ? `<table class="report"><thead><tr><th>Date</th><th class="num">Credit</th><th>Reference / description</th><th>Status</th><th>Payment</th><th></th></tr></thead><tbody>` +
+    r.lines.slice(0, 300).map(l => {
+      const s = ST[l.status]; const p = l.payment;
+      const acts = l.status === 'suggested' ? `<button class="btn bk-act" data-a="confirm" data-id="${l.id}" style="padding:4px 9px;">✓ Confirm</button> <button class="btn bk-act" data-a="unmatch" data-id="${l.id}" style="padding:4px 9px;">✕</button>`
+        : l.status === 'matched' ? `<button class="btn bk-act" data-a="unmatch" data-id="${l.id}" style="padding:4px 9px;">Unmatch</button>`
+        : l.status === 'ignored' ? `<button class="btn bk-act" data-a="unignore" data-id="${l.id}" style="padding:4px 9px;">Undo</button>`
+        : `<button class="btn bk-act" data-a="pick" data-id="${l.id}" style="padding:4px 9px;">Match…</button> <button class="btn bk-act" data-a="ignore" data-id="${l.id}" style="padding:4px 9px;">Not ours</button>`;
+      return `<tr><td>${dmy(l.date)}<br><span class="muted" style="font-size:11px;">${esc(l.statement)}</span></td><td class="num"><b>${inr(l.amount)}</b></td>
+        <td class="ra-wrap">${esc(l.reference || '')}${l.reference && l.narration ? '<br>' : ''}<span class="muted" style="font-size:12px;">${esc(l.narration || '')}</span>${l.note ? `<br><i style="font-size:12px;">Note: ${esc(l.note)}</i>` : ''}</td>
+        <td><span class="pill ${s[1]}">${s[0]}</span>${l.rule ? `<br><span class="muted" style="font-size:11px;">${l.rule === 'reference' ? 'by reference' : l.rule === 'amount_date' ? 'by amount + date' : 'by hand'}</span>` : ''}</td>
+        <td class="ra-wrap">${p ? `#${p.id} ${esc(p.inst_name)}<br><span class="muted" style="font-size:11.5px;">${inr(p.amount)} · ${dmy(p.paid_on)} · ${esc(p.method)}${p.status === 'void' ? ' · <b style="color:#ff8a7d;">VOID</b>' : ''}</span>` : '—'}</td>
+        <td>${acts}<div class="bk-pick" id="bk-pick-${l.id}"></div></td></tr>`;
+    }).join('') + '</tbody></table>' + (r.lines.length > 300 ? `<p class="muted">Showing 300 of ${r.lines.length}.</p>` : '')
+    : `<p class="muted">${bkFilter === 'unmatched' ? 'No unmatched bank entries.' : 'Nothing here.'}</p>`;
+}
+async function bkLoadStatements(){
+  const r = await rpc('sa_web_bank_statements', revCreds());
+  if (revAuthFail(r)) return;
+  if (!r || !r.ok){ $('bk-stmts').innerHTML = '<p class="muted">Unable to load.</p>'; return; }
+  $('bk-stmts').innerHTML = r.statements.length ? `<table class="report"><thead><tr><th>Account</th><th>Period</th><th class="num">Entries</th><th class="num">Credits</th><th>Matched</th><th>Imported</th><th></th></tr></thead><tbody>` +
+    r.statements.map(s => `<tr><td>${esc(s.label)}<br><span class="muted" style="font-size:11px;">${esc(s.file_name || '')}</span></td><td>${dmy(s.from)} – ${dmy(s.to)}</td>
+      <td class="num">${s.entries}</td><td class="num">${inr(s.credit_total)}</td><td>${s.matched} matched · ${s.suggested} suggested · ${s.unmatched} open · ${s.ignored} ignored</td>
+      <td>${esc(s.uploaded_by)}<br><span class="muted" style="font-size:11px;">${dtm(s.uploaded_at)}</span></td>
+      <td><button class="btn btn-danger bk-del" data-id="${s.id}" style="padding:4px 9px;">Remove</button></td></tr>`).join('') + '</tbody></table>'
+    : '<p class="muted">No statement imported yet.</p>';
+}
+$('bk-chips').addEventListener('click', e => {
+  const c = e.target.closest('.fchip'); if (!c) return;
+  bkFilter = c.dataset.f;
+  document.querySelectorAll('#bk-chips .fchip').forEach(x => x.classList.toggle('on', x === c));
+  bkLoadLines();
+});
+$('btn-bk-rematch').addEventListener('click', async () => {
+  revTouch();
+  const r = await rpc('sa_web_bank_rematch', revCreds());
+  if (revAuthFail(r)) return;
+  if (r && r.ok){ toast(`${r.matched} matched · ${r.suggested} suggested.`, 'ok'); raLoad(); } else toast((r && r.error) || 'Unable to match.', 'err');
+});
+async function bkDo(id, action, paymentId, note){
+  const r = await rpc('sa_web_bank_match', { ...revCreds(), p_line_id: id, p_action: action, p_payment_id: paymentId || null, p_note: note || null });
+  if (revAuthFail(r)) return false;
+  if (r && r.ok){ toast('Saved.', 'ok'); raLoad(); return true; }
+  toast((r && r.error) || 'Unable to save.', 'err'); return false;
+}
+$('bk-lines').addEventListener('click', async e => {
+  const b = e.target.closest('.bk-act'), pk = e.target.closest('.bk-pickbtn');
+  revTouch();
+  if (pk){
+    const l = bkLinesData.find(x => String(x.id) === pk.dataset.line);
+    let note = null;
+    if (l && Number(pk.dataset.amount) !== Number(l.amount)){
+      note = prompt(`The amounts differ (${inr(pk.dataset.amount)} recorded vs ${inr(l.amount)} in bank).\nExplain the difference (e.g. gateway charges):`);
+      if (note === null) return;
+    }
+    await bkDo(Number(pk.dataset.line), 'match', Number(pk.dataset.pid), note);
+    return;
+  }
+  if (!b) return;
+  const id = Number(b.dataset.id), a = b.dataset.a;
+  if (a === 'pick'){
+    const box = $('bk-pick-' + id); box.innerHTML = '<span class="muted" style="font-size:12px;">Loading...</span>';
+    const r = await rpc('sa_web_bank_candidates', { ...revCreds(), p_line_id: id });
+    if (revAuthFail(r)) return;
+    if (!r || !r.ok){ box.innerHTML = ''; toast((r && r.error) || 'Unable to load.', 'err'); return; }
+    box.innerHTML = r.payments.length ? '<div class="bk-cands">' + r.payments.slice(0, 8).map(p =>
+      `<button class="btn bk-pickbtn" data-line="${id}" data-pid="${p.id}" data-amount="${p.amount}">#${p.id} ${esc(p.inst_name)} · ${inr(p.amount)}${p.same_amount ? ' ✓' : ''} · ${dmy(p.paid_on)}</button>`).join('') + '</div>'
+      : '<span class="muted" style="font-size:12px;">No unmatched payment within 31 days. Record the payment first, or mark the entry “Not ours”.</span>';
+    return;
+  }
+  if (a === 'ignore'){
+    const note = prompt('Why is this credit not a Dhyeodaya payment? (e.g. “Own transfer”, “Interest”)');
+    if (note === null) return;
+    if (note.trim().length < 3){ toast('Please give a reason.', 'err'); return; }
+    await bkDo(id, 'ignore', null, note.trim()); return;
+  }
+  if (a === 'unmatch' && !confirm('Remove this match?')) return;
+  await bkDo(id, a);
+});
+$('bk-stmts').addEventListener('click', async e => {
+  const b = e.target.closest('.bk-del'); if (!b) return; revTouch();
+  const reason = prompt('Remove this imported statement and its matches?\n\nReason (e.g. “Wrong file”):');
+  if (reason === null) return;
+  if (reason.trim().length < 3){ toast('Please give a reason.', 'err'); return; }
+  const r = await rpc('sa_web_bank_statement_delete', { ...revCreds(), p_id: Number(b.dataset.id), p_reason: reason.trim() });
+  if (revAuthFail(r)) return;
+  if (r && r.ok){ toast('Statement removed.', 'ok'); raLoad(); } else toast((r && r.error) || 'Unable to remove.', 'err');
+});
+
+/* ---- Monthly audit report (print / save as PDF) ---- */
+$('btn-ra-report').addEventListener('click', async () => {
+  if (!revPin) return; revTouch();
+  const w = window.open('', '_blank');
+  if (!w){ toast('Please allow pop-ups to open the report.', 'err'); return; }
+  w.document.write('<p style="font-family:sans-serif;padding:20px;">Preparing the audit report…</p>');
+  const r = await rpc('sa_web_rev_audit_report', { ...revCreds(), p_month: raMonth() });
+  if (revAuthFail(r)){ w.close(); return; }
+  if (!r || !r.ok){ w.close(); toast((r && r.error) || 'Unable to create the report.', 'err'); return; }
+  w.document.open(); w.document.write(raReportHtml(r.report, r.report_hash)); w.document.close();
+  setTimeout(() => { try{ w.focus(); w.print(); }catch(_e){} }, 600);
+});
+function raReportHtml(R, rh){
+  const e = esc, I = R.issuer || {}, t = R.totals, b = R.bank, p = R.period, name = raMonthName(R.month);
+  const SEV = { high: 'High', medium: 'Medium', low: 'Low', info: 'Info' };
+  const VS = { verified: 'Verified', pending: 'Waiting', rejected: 'Rejected', 'n/a': '—' };
+  const flags = R.exceptions.filter(x => x.severity !== 'info'), rev = R.exceptions.filter(x => x.severity === 'info');
+  const status = p.status === 'closed'
+    ? (R.intact ? '<span class="st ok">CLOSED · FIGURES UNCHANGED</span>' : '<span class="st bad">CLOSED · FIGURES CHANGED AFTER CLOSING</span>')
+    : '<span class="st open">OPEN · NOT YET CLOSED</span>';
+  const tbl = (head, rows) => `<table><thead><tr>${head.map(h => `<th class="${h[1] || ''}">${h[0]}</th>`).join('')}</tr></thead><tbody>${rows || `<tr><td colspan="${head.length}" class="mut">None</td></tr>`}</tbody></table>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Revenue audit — ${e(name)}</title><style>
+    @page{ size:A4; margin:14mm 12mm; }
+    body{ font-family:'Segoe UI',Arial,sans-serif; color:#16202e; font-size:11.5px; margin:0; }
+    h1{ font-size:20px; margin:0; } h2{ font-size:13.5px; margin:18px 0 6px; padding-bottom:4px; border-bottom:2px solid #0e7562; color:#0e5f50; }
+    .top{ display:flex; justify-content:space-between; align-items:flex-start; gap:20px; border-bottom:3px solid #0f1b2d; padding-bottom:10px; }
+    .mut{ color:#5d6876; } .num{ text-align:right; } table{ width:100%; border-collapse:collapse; margin-top:4px; }
+    th{ background:#eef2f5; text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; padding:5px 6px; }
+    td{ padding:5px 6px; border-bottom:1px solid #e3e7eb; vertical-align:top; } th.num, td.num{ text-align:right; }
+    .kp{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px; }
+    .kp div{ border:1px solid #d9dfe5; border-radius:6px; padding:8px; } .kp b{ display:block; font-size:16px; margin-top:2px; }
+    .st{ display:inline-block; font-weight:700; font-size:11px; padding:4px 9px; border-radius:4px; letter-spacing:.03em; }
+    .st.ok{ background:#d8f3ea; color:#0b5c4d; } .st.bad{ background:#fde2df; color:#a3261a; } .st.open{ background:#fdf0d8; color:#8a5a00; }
+    .sev{ font-weight:700; } .sev.high{ color:#b42318; } .sev.medium{ color:#b46b00; } .sev.low{ color:#1f5fa8; }
+    .hash{ font-family:Consolas,monospace; font-size:10px; word-break:break-all; }
+    .sign{ display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:28px; }
+    .sign div{ border-top:1px solid #16202e; padding-top:6px; } .two{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    tr{ page-break-inside:avoid; } .foot{ margin-top:18px; font-size:10px; color:#5d6876; border-top:1px solid #d9dfe5; padding-top:6px; }
+  </style></head><body>
+  <div class="top"><div><div class="mut" style="font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;">${e(I.name || 'Dhyeodaya')}</div>
+    <h1>Monthly Revenue Audit Report</h1><div style="font-size:14px; margin-top:2px;"><b>${e(name)}</b> · ${dmy(R.month)} to ${dmy(R.to)}</div></div>
+    <div style="text-align:right;">${status}<div class="mut" style="margin-top:6px;">Generated ${dtm(R.generated_at)}<br>by ${e(R.generated_by)}</div></div></div>
+
+  <div class="kp"><div>Gross collected<b>${inr(t.gross)}</b></div><div>Refunds<b>${inr(t.refunds)}</b></div><div>Net collected<b>${inr(t.net)}</b></div>
+    <div>Payments<b>${t.payments}</b><span class="mut">${t.verified} verified · ${t.pending} waiting · ${t.voids} void</span></div></div>
+
+  <h2>1. Collections</h2>
+  <div class="two"><div>${tbl([['Method'], ['Payments', 'num'], ['Amount', 'num']], t.by_method.map(m => `<tr><td>${e(m.method)}</td><td class="num">${m.count}</td><td class="num">${inr(m.gross)}</td></tr>`).join(''))}</div>
+  <div>${tbl([['Plan'], ['Payments', 'num'], ['Amount', 'num']], t.by_plan.map(m => `<tr><td>${e(m.plan)}</td><td class="num">${m.count}</td><td class="num">${inr(m.gross)}</td></tr>`).join(''))}</div></div>
+
+  <h2>2. Bank reconciliation</h2>
+  ${b.statements.length ? `<p style="margin:4px 0;">Statements: ${b.statements.map(s => `${e(s.label)} (${dmy(s.from)} – ${dmy(s.to)})`).join('; ')}</p>
+  ${tbl([['Bank credits in month'], ['Entries', 'num'], ['Amount', 'num']],
+     `<tr><td>Matched to recorded payments</td><td class="num">${b.matched}</td><td class="num">${inr(b.matched_amount)}</td></tr>
+      <tr><td>Suggested (awaiting confirmation)</td><td class="num">${b.suggested}</td><td class="num">—</td></tr>
+      <tr><td>Not matched</td><td class="num">${b.unmatched}</td><td class="num">${inr(b.unmatched_amount)}</td></tr>
+      <tr><td>Not Dhyeodaya income (ignored, with reason)</td><td class="num">${b.ignored}</td><td class="num">—</td></tr>
+      <tr><td><b>Total credits</b></td><td class="num"><b>${b.lines}</b></td><td class="num"><b>${inr(b.credits)}</b></td></tr>`)}`
+    : '<p class="mut">No bank statement was imported for this month. Non-cash payments were not checked against the bank.</p>'}
+
+  <h2>3. Red flags and review notes (${flags.length})</h2>
+  ${tbl([['Level'], ['Check'], ['Institute'], ['Date'], ['Amount', 'num'], ['Details'], ['Review note']],
+     flags.map(x => `<tr><td class="sev ${x.severity}">${SEV[x.severity]}</td><td>${e(x.title)}${x.payment_id ? '<br><span class="mut">#' + x.payment_id + '</span>' : ''}</td><td>${e(x.inst_name || '—')}</td>
+       <td>${dmy(x.date)}</td><td class="num">${x.amount === null ? '—' : inr(x.amount)}</td><td>${e(x.detail)}</td>
+       <td>${x.review ? e(x.review.note) + '<br><span class="mut">' + e(x.review.by) + ', ' + dtm(x.review.at) + '</span>' : (x.code === 'UNVERIFIED' ? '<span class="mut">Not verified</span>' : '<b style="color:#b42318;">Not reviewed</b>')}</td></tr>`).join(''))}
+
+  <h2>4. Voids and refunds (${rev.length})</h2>
+  ${tbl([['Type'], ['Institute'], ['Date'], ['Amount', 'num'], ['Details']],
+     rev.map(x => `<tr><td>${e(x.title)}</td><td>${e(x.inst_name || '—')}</td><td>${dmy(x.date)}</td><td class="num">${inr(x.amount)}</td><td>${e(x.detail)}</td></tr>`).join(''))}
+
+  <h2>5. Payment register (${R.payments.length})</h2>
+  ${tbl([['#'], ['Date'], ['Institute'], ['Plan'], ['Method / ref'], ['Amount', 'num'], ['Status'], ['Recorded / verified'], ['Receipt'], ['Bank']],
+     R.payments.map(x => `<tr><td>${x.id}</td><td>${dmy(x.paid_on)}</td><td>${e(x.inst_name)}</td><td>${e(x.plan || '—')}${x.months ? ' · ' + x.months + ' mo' : ''}</td>
+       <td>${e(x.method)}${x.reference ? '<br><span class="mut">' + e(x.reference) + '</span>' : ''}</td><td class="num">${inr(x.amount)}${Number(x.refund_amount) > 0 ? '<br><span class="mut">refund ' + inr(x.refund_amount) + '</span>' : ''}</td>
+       <td>${x.status === 'void' ? '<b>VOID</b>' : e(x.status.replace('_', ' '))}</td><td>${e(x.recorded_by || '—')}<br><span class="mut">${VS[x.verify_status] || ''}${x.verified_by ? ' · ' + e(x.verified_by) : ''}</span></td>
+       <td>${e(x.receipt_no || '—')}</td><td>${x.bank === 'matched' ? 'Matched' : x.bank === 'suggested' ? 'Suggested' : x.method === 'Cash' ? 'Cash' : '—'}</td></tr>`).join(''))}
+
+  <h2>6. Integrity</h2>
+  ${tbl([['Item'], ['Value']],
+    `<tr><td>Month status</td><td>${p.status === 'closed' ? `Closed by ${e(p.closed_by)} on ${dtm(p.closed_at)}${p.close_count > 1 ? ` (closed ${p.close_count} times; last reopened: “${e(p.reopen_reason || '')}”)` : ''}` : 'Open'}</td></tr>
+     <tr><td>Fingerprint at closing</td><td class="hash">${e(p.snapshot_hash || '—')}</td></tr>
+     <tr><td>Fingerprint now</td><td class="hash">${e(R.fingerprint_now)}</td></tr>
+     <tr><td>Result</td><td>${p.status !== 'closed' ? 'The month is open; figures may still change.' : R.intact ? '<b style="color:#0b5c4d;">Match — the figures have not changed since the month was closed.</b>' : '<b style="color:#b42318;">Mismatch — the figures were changed after closing.</b>'}</td></tr>
+     <tr><td>Audit trail</td><td>${R.audit_chain.entries} tamper-evident entries · latest <span class="hash">${e(R.audit_chain.last_hash || '—')}</span></td></tr>
+     <tr><td>This report's fingerprint</td><td class="hash">${e(rh)}</td></tr>`)}
+
+  <div class="sign"><div>Prepared by<br><b>${e(R.generated_by)}</b></div>
+    <div>Reviewed and approved by<br><b>${e(I.signatory_name || '')}</b>${I.signatory_title ? ', ' + e(I.signatory_title) : ''}<br><span class="mut">Signature and date</span></div></div>
+  <div class="foot">Fingerprints are SHA-256 values calculated by the Dhyeodaya database from the month's payment records. Anyone with access can recalculate them to confirm that the figures in this report have not been altered. ${e(I.name || 'Dhyeodaya')}${I.email ? ' · ' + e(I.email) : ''}${I.phone ? ' · ' + e(I.phone) : ''}</div>
+  </body></html>`;
+}
+
 /* ---- Audit log + subscription events (read-only) ---- */
 const AUDIT_NAME = { payment_created: 'Payment recorded', payment_voided: 'Payment voided', payment_refunded: 'Payment refunded',
   plan_changed: 'Institute plan changed', plan_created: 'Plan created', plan_price_changed: 'Plan price changed', plan_updated: 'Plan updated',
   plan_activated: 'Plan activated', plan_deactivated: 'Plan deactivated', subscription_suspended: 'Subscription suspended',
-  subscription_reactivated: 'Subscription reactivated', access_end_date_changed: 'Access end date changed', institute_deleted: 'Institute deleted' };
+  subscription_reactivated: 'Subscription reactivated', access_end_date_changed: 'Access end date changed', institute_deleted: 'Institute deleted',
+  payment_verified: 'Payment verified', payment_rejected: 'Payment rejected', rev_month_closed: 'Month closed', rev_month_reopened: 'Month reopened',
+  rev_exception_reviewed: 'Red flag reviewed', rev_exception_unreviewed: 'Review note removed', rev_audit_report: 'Audit report created',
+  bank_statement_imported: 'Bank statement imported', bank_statement_deleted: 'Bank statement removed', bank_entry_confirm: 'Bank match confirmed',
+  bank_entry_match: 'Bank entry matched', bank_entry_unmatch: 'Bank match removed', bank_entry_ignore: 'Bank entry ignored', bank_entry_unignore: 'Bank entry restored' };
 $('btn-audit-load').addEventListener('click', async () => {
   revTouch(); $('rev-audit').innerHTML = '<p class="muted">Loading...</p>';
   const r = await rpc('sa_web_audit_log', { ...revCreds(), p_limit: 200 });
