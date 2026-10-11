@@ -1755,7 +1755,7 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-10-09.3';
+const APP_VERSION = '2026-10-11.1';
 let updShown = false;
 async function checkForUpdate(){
   try{
@@ -2268,10 +2268,23 @@ function renderRevenue(){
         <td><button class="btn rev-pay" data-code="${esc(s.code)}" style="padding:4px 9px;">➕ Payment</button>
             <button class="btn rev-plan" data-code="${esc(s.code)}" style="padding:4px 9px;">🏷 Plan</button></td></tr>`; }).join('') + '</tbody></table>';
 
+  /* Plans grouped by name (Aarambh – Monthly, – Quarterly …), periods in order;
+     per month in whole rupees, with the saving against the same plan's monthly price */
+  const planBase = p => String(p.name || '').split(/\s+[–-]\s+/)[0].trim();
+  const planGroups = [];
+  revPlans.forEach(p => { const b = planBase(p); let g = planGroups.find(x => x.base === b); if (!g){ g = { base: b, items: [] }; planGroups.push(g); } g.items.push(p); });
+  planGroups.forEach(g => { g.items.sort((a, b) => a.period_months - b.period_months); const m = g.items.find(x => x.period_months === 1); g.monthly = m ? Number(m.price) : null; g.minPrice = Math.min(...g.items.map(x => Number(x.price) / x.period_months)); });
+  planGroups.sort((a, b) => (a.monthly ?? a.minPrice) - (b.monthly ?? b.minPrice));
+  const inr0 = n => '₹' + Math.round(Number(n || 0)).toLocaleString('en-IN');
   $('rev-plans').innerHTML = revPlans.length ? `<table class="report"><thead><tr><th>Plan</th><th class="num">Price</th><th>Period</th><th class="num">Per month</th><th>Live tests</th><th>Institutes</th><th>Status</th><th></th></tr></thead><tbody>` +
-    revPlans.map(p => `<tr><td>${esc(p.name)}</td><td class="num"><b>${inr(p.price)}</b></td><td>${PERIOD_NAME[p.period_months]}</td>
-      <td class="num">${inr(Number(p.price) / p.period_months)}</td><td>${p.tests_per_cycle ?? 'Unlimited'}</td><td>${p.institutes}</td>
-      <td>${p.is_active ? 'Active' : 'Inactive'}</td><td><button class="btn plan-edit" data-id="${p.id}" style="padding:4px 9px;">✏️ Edit</button></td></tr>`).join('') + '</tbody></table>'
+    planGroups.map((g, gi) => g.items.map((p, k) => {
+      const pm = Number(p.price) / p.period_months;
+      const save = (g.monthly && p.period_months > 1) ? Math.round((1 - pm / g.monthly) * 100) : null;
+      const saveTxt = save === null ? '' : save > 0 ? ` <span style="color:#27ae60; font-size:11.5px; font-weight:600;">(${save}% bachat)</span>`
+                    : ` <span style="color:#e74c3c; font-size:11.5px; font-weight:600;">(${save === 0 ? 'no saving' : Math.abs(save) + '% costlier'})</span>`;
+      return `<tr style="${k === 0 && gi > 0 ? 'border-top:2px solid var(--line, #2a3a55);' : ''}${p.is_active ? '' : 'opacity:.55;'}"><td>${esc(p.name)}</td><td class="num"><b>${inr(p.price)}</b></td><td>${PERIOD_NAME[p.period_months]}</td>
+      <td class="num" style="white-space:nowrap;">${inr0(pm)}${saveTxt}</td><td>${p.tests_per_cycle ?? 'Unlimited'}</td><td>${p.institutes}</td>
+      <td>${p.is_active ? 'Active' : 'Inactive'}</td><td><button class="btn plan-edit" data-id="${p.id}" style="padding:4px 9px;">✏️ Edit</button></td></tr>`; }).join('')).join('') + '</tbody></table>'
     : '<p class="muted">No plans yet. Create your first plan below, for example: Arambh · ₹500 · Monthly · 4 live tests.</p>';
 
   $('rev-payments').innerHTML = r.payments.length ? `<table class="report"><thead><tr><th>ID</th><th>Date</th><th>Institute</th><th class="num">Amount</th><th>Plan / period</th><th>Access covered</th><th>Method</th><th>Reference</th><th>Status</th><th>Receipt</th><th></th></tr></thead><tbody>` +
