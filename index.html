@@ -1798,7 +1798,7 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-10-11.2';
+const APP_VERSION = '2026-10-11.3';
 let updShown = false;
 async function checkForUpdate(){
   try{
@@ -3166,7 +3166,12 @@ async function loadOffers(){
     const r = await rpc('sa_web_offers', revCreds());
     if (revAuthFail(r)) return;
     revOffers = (r && r.ok && r.offers) || [];
-  }catch(_e){ $('rev-offers').innerHTML = '<p class="err">Connection error.</p>'; return; }
+  }catch(e){
+    $('rev-offers').innerHTML = /\(404\)/.test(String(e && e.message))
+      ? '<p class="err">Offers are not set up in the database yet. Please run <b>1_t_offers.sql</b> in Supabase → SQL Editor, then open this tab again.</p>'
+      : '<p class="err">Connection error. Please check your internet and try again.</p>';
+    return;
+  }
   const per = o => o.periods ? o.periods.map(m => PERIOD_NAME[m]).join(', ') : 'All periods';
   $('rev-offers').innerHTML = revOffers.length ? `<table class="report"><thead><tr><th>Offer</th><th>Discount</th><th>Periods</th><th>Institutes</th><th>Valid</th><th>Use</th><th class="num">Used</th><th class="num">Discount given</th><th>Status</th><th></th></tr></thead><tbody>` +
     revOffers.map(o => { const st = OF_STATE[o.state] || [o.state, '#95a5a6']; return `<tr style="${o.state === 'running' ? '' : 'opacity:.65;'}">
@@ -3214,7 +3219,7 @@ $('btn-of-save').addEventListener('click', async () => {
     if (revAuthFail(r)) return;
     if (r && r.ok){ toast('Offer saved.', 'ok'); resetOfferForm(); loadOffers(); }
     else errEl.textContent = (r && r.error) || 'Offer could not be saved.';
-  }catch(_e){ errEl.textContent = 'Connection error.'; }
+  }catch(e){ errEl.textContent = /\(404\)/.test(String(e && e.message)) ? 'Offers are not set up in the database yet: please run 1_t_offers.sql first.' : 'Connection error.'; }
   finally{ b.disabled = false; }
 });
 
