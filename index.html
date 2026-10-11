@@ -385,6 +385,8 @@
               </select></div>
           </div>
           <p class="muted" id="rp-hint" style="font-size:12px; margin:6px 0 0;"></p>
+          <div id="rp-offer-wrap" class="hidden"><label>🎁 Offer</label><select class="sel" id="rp-offer" style="width:100%;"></select>
+            <p class="muted" id="rp-offer-hint" style="font-size:12px; margin:6px 0 0;"></p></div>
           <label id="rp-ref-label">Reference</label><input id="rp-ref">
           <label id="rp-note-label">Note</label><input id="rp-note">
           <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);">
@@ -499,6 +501,7 @@
             <button class="rev-tab" data-tab="ren">Renewals</button>
             <button class="rev-tab" data-tab="pays">Payments</button>
             <button class="rev-tab" data-tab="plans">Plans &amp; pricing</button>
+            <button class="rev-tab" data-tab="offers">🎁 Offers</button>
             <button class="rev-tab" data-tab="ra">🛡 Revenue audit</button>
             <button class="rev-tab" data-tab="audit">Audit log</button>
           </div>
@@ -610,6 +613,8 @@
                     <option>UPI</option><option>Bank transfer</option><option>Cash</option><option>Cheque</option><option>Card</option><option>Payment gateway</option><option>Other</option>
                   </select></div>
               </div>
+              <div id="pay-offer-wrap" class="hidden"><label>🎁 Offer</label><select class="sel" id="pay-offer" style="width:100%;"></select>
+                <p class="muted" id="pay-offer-hint" style="font-size:12px; margin:6px 0 0;"></p></div>
               <label id="pay-ref-label">Reference</label><input id="pay-ref">
               <label id="pay-note-label">Note</label><input id="pay-note">
               <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);">
@@ -666,6 +671,44 @@
               <button class="btn" id="btn-plan-new">New plan</button>
             </div>
             <p class="muted" style="font-size:12px; margin:8px 0 0;">Changing a price affects future payments only; recorded payments keep their amounts.</p>
+          </div>
+          </div>
+
+          <div class="rev-pane hidden" data-pane="offers">
+          <label>Offers</label>
+          <div class="report-wrap" id="rev-offers"></div>
+          <div class="card" style="margin-top:10px;">
+            <b id="of-title">🎁 New offer</b>
+            <input type="hidden" id="of-id">
+            <div class="grid">
+              <div><label>Offer name (printed on the receipt)</label><input id="of-name" placeholder="e.g. Diwali Offer"></div>
+              <div><label>Discount</label><div style="display:flex; gap:6px;"><input id="of-value" type="number" min="0" step="1" style="flex:1; min-width:0;">
+                <select class="sel" id="of-type" style="width:84px;"><option value="percent">%</option><option value="flat">₹</option></select></div></div>
+              <div><label>Starts on</label><input id="of-from" type="date"></div>
+              <div><label>Ends on</label><input id="of-to" type="date"></div>
+            </div>
+            <label>Billing periods</label>
+            <div id="of-periods" style="display:flex; gap:16px; flex-wrap:wrap;">
+              <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);"><input type="checkbox" value="1" style="width:auto;" checked> Monthly</label>
+              <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);"><input type="checkbox" value="3" style="width:auto;" checked> Quarterly</label>
+              <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);"><input type="checkbox" value="6" style="width:auto;" checked> Half-yearly</label>
+              <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);"><input type="checkbox" value="12" style="width:auto;" checked> Yearly</label>
+            </div>
+            <label>Institutes</label>
+            <div style="display:flex; gap:16px; flex-wrap:wrap;">
+              <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);"><input type="radio" name="of-scope" value="all" style="width:auto;" checked> All institutes</label>
+              <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);"><input type="radio" name="of-scope" value="sel" style="width:auto;"> Only chosen institutes</label>
+            </div>
+            <div id="of-inst-list" class="hidden" style="max-height:200px; overflow:auto; border:1px solid var(--line-soft); border-radius:10px; padding:8px 10px; margin-top:6px;"></div>
+            <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);" style="margin-top:10px;"><input type="checkbox" id="of-once" style="width:auto;" checked> Only once per institute</label>
+            <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);" style="margin-top:4px;"><input type="checkbox" id="of-active" style="width:auto;" checked> Active</label>
+            <label>Internal note (not shown to institutes)</label><input id="of-note">
+            <div class="err" id="of-err"></div>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="btn-of-save">Save offer</button>
+              <button class="btn" id="btn-of-new">New offer</button>
+            </div>
+            <p class="muted" style="font-size:12px; margin:8px 0 0;">An offer is a one-time discount on one payment: the receipt shows plan price, offer and amount paid. The institute's regular price and MRR stay the same. Once an offer has been used, its discount cannot be changed (switch it off and create a new one).</p>
           </div>
           </div>
 
@@ -1755,7 +1798,7 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-10-11.1';
+const APP_VERSION = '2026-10-11.2';
 let updShown = false;
 async function checkForUpdate(){
   try{
@@ -1829,6 +1872,7 @@ async function openRecordPayment(code){
   if (!$('rp-date').value) $('rp-date').value = isoToday();
   rpKey = newPayKey();
   rpPrefillPlan(); rpRefHint();
+  refreshOffers('rp');
 }
 function rpPrefillPlan(){
   const ip = rpInstPlans[$('rp-inst').value] || {};
@@ -1844,6 +1888,7 @@ function rpExpected(){
 function rpUpdateHint(){
   const p = rpPlans.find(x => String(x.id) === $('rp-plan').value);
   if (!p){ $('rp-hint').textContent = ''; return; }
+  if (typeof offerSelected === 'function' && offerSelected('rp')){ $('rp-hint').textContent = ''; return; }
   const planAmt = Math.round(Number(p.price) / p.period_months * Number($('rp-months').value) * 100) / 100;
   const amt = Number($('rp-amount').value || 0);
   $('rp-hint').textContent = amt && Math.abs(amt - planAmt) >= 0.01
@@ -1887,6 +1932,7 @@ $('btn-rp-save').addEventListener('click', async () => {
     <table style="margin-top:10px; font-size:14px;">
       ${row('Institute', esc((inst.name || code) + ' (' + code + ')'))}
       ${row('Plan', esc(plan.name || '—') + (inst.plan && inst.plan !== plan.name ? ` <span class="muted">(was ${esc(inst.plan)})</span>` : ''))}
+      ${offerSelected('rp') ? row('Offer', `${esc(offerSelected('rp').name)} · plan price ${inr(offerState.rp.listAmount)} − ${inr(offerSelected('rp').discount)}`) : ''}
       ${row('Amount', inr(amount))}
       ${row('Billing period', esc($('rp-months').selectedOptions[0].text))}
       ${row('Payment date', dmy(date))}
@@ -1899,7 +1945,8 @@ $('btn-rp-save').addEventListener('click', async () => {
   try{
     const r = await rpc('sa_web_record_payment', { ...creds(), p_code: code, p_plan_id: Number(planId), p_amount: Number(amount),
       p_paid_on: date, p_period_months: months, p_method: method, p_reference: ref, p_note: note,
-      p_extend_access: $('rp-extend').checked, p_apply_plan_limits: $('rp-apply').checked, p_client_key: rpKey });
+      p_extend_access: $('rp-extend').checked, p_apply_plan_limits: $('rp-apply').checked, p_client_key: rpKey,
+      p_offer_id: $('rp-offer').value ? Number($('rp-offer').value) : null });
     if (handleAuthError(r)) return;
     if (r && r.ok){
       $('rp-ok').innerHTML = `<div class="card" style="margin:10px 0 0; border-color:var(--accent);"><b>✅ Payment recorded successfully.</b>
@@ -1907,11 +1954,62 @@ $('btn-rp-save').addEventListener('click', async () => {
         ${r.verification === 'pending' ? '<div class="muted" style="margin-top:4px; font-size:12.5px;">🕓 Sent to the founder for verification.</div>' : ''}</div>`;
       receiptAfterSave(r, 'rp-ok');
       rpKey = newPayKey(); $('rp-ref').value = ''; $('rp-note').value = '';
+      refreshOffers('rp');
       await loadList();
       const again = await rpc('sa_web_active_plans', creds()); if (again && again.ok) rpInstPlans = again.institute_plans || {};
     } else errEl.textContent = (r && r.error) || 'Payment could not be saved.';
   }catch(_e){ errEl.textContent = 'Connection error. Payment could not be saved; you can safely try again.'; }
   finally{ rpSaving = false; b.disabled = false; b.textContent = 'Save payment'; }
+});
+
+/* ---------------- OFFERS IN THE PAYMENT FORMS ----------------
+   After institute / plan / period / date is chosen, the offers this institute can
+   use are listed. Choosing one fills the amount (plan price − offer) and locks it. */
+const offerState = { rp: { list: [], listAmount: null, seq: 0 }, pay: { list: [], listAmount: null, seq: 0 } };
+function offerPlanId(pre){
+  if (pre === 'rp') return $('rp-plan').value ? Number($('rp-plan').value) : null;
+  if ($('pay-plan').value) return Number($('pay-plan').value);
+  const s = typeof statusOf === 'function' ? statusOf($('pay-inst').value) : null;
+  return s && s.plan_id ? Number(s.plan_id) : null;
+}
+function offerSelected(pre){
+  const id = $(pre + '-offer').value;
+  return id ? offerState[pre].list.find(o => String(o.id) === id) || null : null;
+}
+function offerLabel(o){ return o.discount_type === 'percent' ? `${Number(o.discount_value)}% off` : `${inr(o.discount_value)} off`; }
+function applyOffer(pre){
+  const o = offerSelected(pre), amt = $(pre + '-amount'), hint = $(pre + '-offer-hint');
+  if (o){
+    amt.value = o.amount; amt.readOnly = true; amt.style.opacity = '.8';
+    hint.innerHTML = `Plan price ${inr(offerState[pre].listAmount)} − <b>${esc(o.name)}</b> ${inr(o.discount)} = <b>${inr(o.amount)}</b>. This amount is fixed while the offer is chosen.`;
+  } else {
+    if (amt.readOnly){ amt.readOnly = false; amt.style.opacity = ''; $(pre + '-months').dispatchEvent(new Event('change')); }
+    hint.textContent = offerState[pre].list.length ? `${offerState[pre].list.length} offer(s) available for this institute.` : '';
+  }
+  if (pre === 'rp' && typeof rpUpdateHint === 'function') rpUpdateHint();
+}
+async function refreshOffers(pre){
+  const st = offerState[pre], seq = ++st.seq, keep = $(pre + '-offer').value;
+  const code = $(pre + '-inst').value, planId = offerPlanId(pre);
+  let list = [], listAmount = null;
+  if (code && planId){
+    try{
+      const r = await rpc('sa_web_offers_for', { ...creds(), p_code: code, p_plan_id: planId,
+        p_period_months: Number($(pre + '-months').value), p_paid_on: $(pre + '-date').value || null });
+      if (r && r.ok){ list = r.offers || []; listAmount = r.list_amount; }
+    }catch(_e){}
+  }
+  if (seq !== st.seq) return;   // a newer request is on its way
+  st.list = list; st.listAmount = listAmount;
+  $(pre + '-offer').innerHTML = '<option value="">No offer</option>' + list.map(o =>
+    `<option value="${o.id}">${esc(o.name)} · ${offerLabel(o)} → ${inr(o.amount)} (till ${dmy(o.valid_to)})</option>`).join('');
+  $(pre + '-offer').value = list.some(o => String(o.id) === keep) ? keep : '';
+  $(pre + '-offer-wrap').classList.toggle('hidden', list.length === 0);
+  applyOffer(pre);
+}
+['rp', 'pay'].forEach(pre => {
+  ['inst', 'plan', 'months', 'date'].forEach(f => $(pre + '-' + f).addEventListener('change', () => setTimeout(() => refreshOffers(pre), 0)));
+  $(pre + '-offer').addEventListener('change', () => applyOffer(pre));
 });
 
 /* ---------------- PAYMENT RECEIPTS ---------------- */
@@ -2294,7 +2392,7 @@ function renderRevenue(){
                   : Number(p.refund_amount) > 0 ? `<div class="muted" style="font-size:11px;">Refunded ${inr(p.refund_amount)} on ${dmy(p.refund_date)}</div>` : '';
       const canRefund = p.status === 'paid' || p.status === 'partially_refunded';
       return `<tr style="${p.status === 'void' ? 'opacity:.6;' : ''}"><td>#${p.id}</td><td>${dmy(p.paid_on)}</td><td>${esc(p.name)}${p.deleted_institute ? ' <span class="muted">(deleted)</span>' : ''}</td>
-        <td class="num"><b>${inr(p.amount)}</b></td><td>${esc(p.plan || '—')}${p.months ? ' · ' + p.months + ' mo' : ''}</td>
+        <td class="num"><b>${inr(p.amount)}</b>${p.offer ? `<div class="muted" style="font-size:11px; white-space:nowrap;">🎁 ${esc(p.offer)} −${inr(p.discount)}</div>` : ''}</td><td>${esc(p.plan || '—')}${p.months ? ' · ' + p.months + ' mo' : ''}</td>
         <td>${p.coverage_start ? dmy(p.coverage_start) + ' – ' + dmy(p.coverage_end) : '—'}</td>
         <td>${esc(p.method || '—')}</td><td>${esc(p.reference || '—')}</td>
         <td><span class="pill ${st[1]}">${esc(st[0])}</span>${extra}</td>
@@ -2322,6 +2420,7 @@ function prefillPayment(){
   $('pay-plan').value = s.plan_id && act.some(p => p.id === s.plan_id) ? String(s.plan_id) : '';
   $('pay-amount').value = (s.price !== null && s.price !== undefined) ? s.price : '';
   if (s.period_months) $('pay-months').value = String(s.period_months);
+  if (typeof refreshOffers === 'function') refreshOffers('pay');
 }
 $('pay-plan').addEventListener('change', () => {
   const s = statusOf($('pay-inst').value), p = revPlans.find(x => String(x.id) === $('pay-plan').value);
@@ -2407,6 +2506,7 @@ $('btn-pay-save').addEventListener('click', async () => {
     <table style="margin-top:10px; font-size:14px;">
       ${row('Institute', esc(s ? s.name + ' (' + s.code + ')' : code))}
       ${row('Plan', esc(chosenPlan ? chosenPlan.name : ((s && s.plan) || '—')) + (chosenPlan && s && s.plan && s.plan !== chosenPlan.name ? ` <span class="muted">(was ${esc(s.plan)})</span>` : ''))}
+      ${offerSelected('pay') ? row('Offer', `${esc(offerSelected('pay').name)} · plan price ${inr(offerState.pay.listAmount)} − ${inr(offerSelected('pay').discount)}`) : ''}
       ${row('Amount', inr(amount))}
       ${row('Billing period', esc($('pay-months').selectedOptions[0].text))}
       ${row('Payment date', dmy(date))}
@@ -2420,7 +2520,8 @@ $('btn-pay-save').addEventListener('click', async () => {
     const r = await rpc('sa_web_payment_add', { ...revCreds(), p_code: code, p_amount: Number(amount), p_paid_on: date,
       p_period_months: months, p_method: method, p_reference: ref, p_note: note,
       p_extend_access: $('pay-extend').checked, p_apply_plan_limits: $('pay-apply').checked, p_client_key: payKey,
-      p_plan_id: $('pay-plan').value ? Number($('pay-plan').value) : null });
+      p_plan_id: $('pay-plan').value ? Number($('pay-plan').value) : null,
+      p_offer_id: $('pay-offer').value ? Number($('pay-offer').value) : null });
     if (revAuthFail(r)) return;
     if (r && r.ok){
       $('pay-ok').innerHTML = `<div class="card" style="margin:10px 0 0; border-color:var(--accent);"><b>✅ Payment recorded successfully.</b>
@@ -2428,6 +2529,7 @@ $('btn-pay-save').addEventListener('click', async () => {
       receiptAfterSave(r, 'pay-ok');
       payKey = newPayKey();
       $('pay-ref').value = ''; $('pay-note').value = '';
+      refreshOffers('pay');
       await loadRevenue(); loadList();
     } else errEl.textContent = (r && r.error) || 'Payment could not be saved.';
   }catch(_e){ errEl.textContent = 'Connection error. Payment could not be saved; you can safely try again.'; }
@@ -3033,6 +3135,89 @@ function resetPlanForm(){
   $('plan-tests').value = ''; $('plan-active').checked = true; $('plan-err').textContent = ''; $('plan-form-title').textContent = '➕ Add a plan';
 }
 $('btn-plan-new').addEventListener('click', resetPlanForm);
+/* ---------------- OFFERS (Revenue → 🎁 Offers) ---------------- */
+let revOffers = [];
+const OF_STATE = { running: ['Running', '#27ae60'], upcoming: ['Upcoming', '#f1c40f'], ended: ['Ended', '#95a5a6'], off: ['Off', '#95a5a6'] };
+function ofInstList(selected){
+  const sel = new Set(selected || []);
+  $('of-inst-list').innerHTML = institutes.filter(i => i.code !== 'VIDYAPATH').map(i =>
+    `<label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text); margin:3px 0;">
+       <input type="checkbox" value="${esc(i.code)}" style="width:auto;" ${sel.has(i.code) ? 'checked' : ''}> ${esc(i.name)} <span class="muted">(${esc(i.code)})</span></label>`).join('')
+    || '<span class="muted">No institutes yet.</span>';
+}
+function ofScope(v){
+  document.querySelectorAll('input[name="of-scope"]').forEach(r => { r.checked = r.value === v; });
+  $('of-inst-list').classList.toggle('hidden', v !== 'sel');
+}
+document.querySelectorAll('input[name="of-scope"]').forEach(r => r.addEventListener('change', () => ofScope(r.value)));
+function resetOfferForm(){
+  $('of-id').value = ''; $('of-name').value = ''; $('of-value').value = ''; $('of-type').value = 'percent';
+  $('of-from').value = isoToday(); const t = new Date(); t.setDate(t.getDate() + 30);
+  $('of-to').value = new Date(t.getTime() - t.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  document.querySelectorAll('#of-periods input').forEach(c => { c.checked = true; });
+  ofInstList([]); ofScope('all');
+  $('of-once').checked = true; $('of-active').checked = true; $('of-note').value = '';
+  $('of-err').textContent = ''; $('of-title').textContent = '🎁 New offer';
+}
+async function loadOffers(){
+  revTouch();
+  $('rev-offers').innerHTML = '<p class="muted">Loading…</p>';
+  try{
+    const r = await rpc('sa_web_offers', revCreds());
+    if (revAuthFail(r)) return;
+    revOffers = (r && r.ok && r.offers) || [];
+  }catch(_e){ $('rev-offers').innerHTML = '<p class="err">Connection error.</p>'; return; }
+  const per = o => o.periods ? o.periods.map(m => PERIOD_NAME[m]).join(', ') : 'All periods';
+  $('rev-offers').innerHTML = revOffers.length ? `<table class="report"><thead><tr><th>Offer</th><th>Discount</th><th>Periods</th><th>Institutes</th><th>Valid</th><th>Use</th><th class="num">Used</th><th class="num">Discount given</th><th>Status</th><th></th></tr></thead><tbody>` +
+    revOffers.map(o => { const st = OF_STATE[o.state] || [o.state, '#95a5a6']; return `<tr style="${o.state === 'running' ? '' : 'opacity:.65;'}">
+      <td><b>${esc(o.name)}</b>${o.note ? `<div class="muted" style="font-size:11px;">${esc(o.note)}</div>` : ''}</td>
+      <td><b>${offerLabel(o)}</b></td><td>${esc(per(o))}</td>
+      <td>${o.institutes ? o.institutes.map(i => esc(i.name)).join(', ') : 'All institutes'}</td>
+      <td style="white-space:nowrap;">${dmy(o.valid_from)} – ${dmy(o.valid_to)}</td>
+      <td>${o.once_per_institute ? 'Once per institute' : 'Repeatable'}</td>
+      <td class="num">${o.used}</td><td class="num">${inr(o.discount_given)}</td>
+      <td><span style="color:${st[1]}; font-weight:600;">● ${st[0]}</span></td>
+      <td><button class="btn of-edit" data-id="${o.id}" style="padding:4px 9px;">✏️ Edit</button></td></tr>`; }).join('') + '</tbody></table>'
+    : '<p class="muted">No offers yet. Create one below, for example: Diwali Offer · 10% · Yearly · all institutes · 15 days.</p>';
+}
+document.querySelector('.rev-tab[data-tab="offers"]').addEventListener('click', () => { if (!$('of-id').value && !$('of-name').value) resetOfferForm(); loadOffers(); });
+$('rev-offers').addEventListener('click', (e) => {
+  const b = e.target.closest('.of-edit'); if (!b) return;
+  const o = revOffers.find(x => String(x.id) === b.dataset.id); if (!o) return;
+  $('of-id').value = o.id; $('of-name').value = o.name; $('of-value').value = Number(o.discount_value); $('of-type').value = o.discount_type;
+  $('of-from').value = o.valid_from; $('of-to').value = o.valid_to;
+  document.querySelectorAll('#of-periods input').forEach(c => { c.checked = !o.periods || o.periods.includes(Number(c.value)); });
+  ofInstList((o.institutes || []).map(i => i.code)); ofScope(o.institutes ? 'sel' : 'all');
+  $('of-once').checked = !!o.once_per_institute; $('of-active').checked = !!o.is_active; $('of-note').value = o.note || '';
+  $('of-err').textContent = ''; $('of-title').textContent = `✏️ Edit offer: ${o.name}`;
+  $('of-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+$('btn-of-new').addEventListener('click', resetOfferForm);
+$('btn-of-save').addEventListener('click', async () => {
+  const errEl = $('of-err'); errEl.textContent = ''; revTouch();
+  const name = $('of-name').value.trim(), value = Number($('of-value').value), type = $('of-type').value;
+  const periods = [...document.querySelectorAll('#of-periods input:checked')].map(c => Number(c.value));
+  const scope = (document.querySelector('input[name="of-scope"]:checked') || {}).value;
+  const codes = scope === 'sel' ? [...document.querySelectorAll('#of-inst-list input:checked')].map(c => c.value) : null;
+  if (name.length < 2){ errEl.textContent = 'Please give the offer a name.'; return; }
+  if (!(value > 0)){ errEl.textContent = 'Please enter the discount.'; return; }
+  if (type === 'percent' && value > 90){ errEl.textContent = 'A % discount can be at most 90%.'; return; }
+  if (!periods.length){ errEl.textContent = 'Choose at least one billing period.'; return; }
+  if (scope === 'sel' && !codes.length){ errEl.textContent = 'Choose at least one institute, or select "All institutes".'; return; }
+  if (!$('of-from').value || !$('of-to').value || $('of-to').value < $('of-from').value){ errEl.textContent = 'Please check the start and end dates.'; return; }
+  const b = $('btn-of-save'); b.disabled = true;
+  try{
+    const r = await rpc('sa_web_offer_save', { ...revCreds(), p_id: $('of-id').value ? Number($('of-id').value) : null,
+      p_name: name, p_discount_type: type, p_discount_value: value, p_codes: codes, p_periods: periods,
+      p_valid_from: $('of-from').value, p_valid_to: $('of-to').value,
+      p_once_per_institute: $('of-once').checked, p_is_active: $('of-active').checked, p_note: $('of-note').value.trim() });
+    if (revAuthFail(r)) return;
+    if (r && r.ok){ toast('Offer saved.', 'ok'); resetOfferForm(); loadOffers(); }
+    else errEl.textContent = (r && r.error) || 'Offer could not be saved.';
+  }catch(_e){ errEl.textContent = 'Connection error.'; }
+  finally{ b.disabled = false; }
+});
+
 $('rev-plans').addEventListener('click', (e) => {
   const b = e.target.closest('.plan-edit'); if (!b) return;
   const p = revPlans.find(x => String(x.id) === b.dataset.id); if (!p) return;
