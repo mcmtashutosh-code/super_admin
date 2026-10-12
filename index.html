@@ -502,6 +502,7 @@
             <button class="rev-tab" data-tab="pays">Payments</button>
             <button class="rev-tab" data-tab="plans">Plans &amp; pricing</button>
             <button class="rev-tab" data-tab="offers">🎁 Offers</button>
+            <button class="rev-tab" data-tab="exp">💸 Expenses</button>
             <button class="rev-tab" data-tab="ra">🛡 Revenue audit</button>
             <button class="rev-tab" data-tab="audit">Audit log</button>
           </div>
@@ -672,6 +673,43 @@
             </div>
             <p class="muted" style="font-size:12px; margin:8px 0 0;">Changing a price affects future payments only; recorded payments keep their amounts.</p>
           </div>
+          </div>
+
+          <div class="rev-pane hidden" data-pane="exp">
+            <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-top:8px;">
+              <div><label>Month</label><input type="month" id="ex-month"></div>
+              <button class="btn" id="btn-ex-load" style="margin-bottom:2px;">🔄 Load</button>
+            </div>
+            <div class="kpis" style="grid-template-columns:repeat(3, 1fr);">
+              <div class="kpi" id="ex-k-in" title="Payments received in this month minus refunds (same as Cash collected)."><span class="kl">Money received</span><b>–</b><span class="kc"></span></div>
+              <div class="kpi" id="ex-k-out" title="All expenses of this month (void entries not counted)."><span class="kl">Expenses</span><b>–</b><span class="kc"></span></div>
+              <div class="kpi" id="ex-k-net" title="Money received − expenses."><span class="kl">Net profit</span><b>–</b><span class="kc"></span></div>
+            </div>
+            <div id="ex-copy" style="margin-top:10px;"></div>
+            <label>By category</label><div class="report-wrap" id="ex-cats"></div>
+            <label>Last 6 months</label><div class="report-wrap" id="ex-trend"></div>
+            <label>Expenses this month</label>
+            <div class="report-wrap" id="ex-rows"></div>
+            <div class="card" style="margin-top:10px;">
+              <b>➕ Add an expense</b>
+              <div class="grid">
+                <div><label>Date</label><input type="date" id="ex-date"></div>
+                <div><label>Category</label><select class="sel" id="ex-cat" style="width:100%;"></select></div>
+                <div><label>Paid to (vendor)</label><input id="ex-vendor" placeholder="e.g. Supabase, GoDaddy, Facebook"></div>
+                <div><label>Amount (₹)</label><input id="ex-amount" type="number" min="0" step="0.01"></div>
+              </div>
+              <label>What was it for?</label><input id="ex-desc" placeholder="e.g. Supabase Pro plan — October">
+              <div class="grid">
+                <div><label>Paid by</label><select class="sel" id="ex-method" style="width:100%;">
+                  <option>UPI</option><option>Card</option><option>Bank transfer</option><option>Cash</option><option>Other</option></select></div>
+                <div><label>Reference / invoice no. (optional)</label><input id="ex-ref"></div>
+              </div>
+              <label>Bill / invoice link (optional, e.g. Google Drive)</label><input id="ex-link" placeholder="https://…">
+              <label style="text-transform:none; letter-spacing:0; font-weight:500; display:flex; gap:8px; align-items:center; color:var(--text);" style="margin-top:8px;"><input type="checkbox" id="ex-monthly" style="width:auto;"> Monthly expense (can be copied into next month with one click)</label>
+              <div class="err" id="ex-err"></div>
+              <button class="btn btn-primary" id="btn-ex-add" style="margin-top:6px;">Save expense</button>
+              <p class="muted" style="font-size:12px; margin:8px 0 0;">Expenses are never deleted: a wrong entry is voided with a reason. Months closed in Revenue audit are locked.</p>
+            </div>
           </div>
 
           <div class="rev-pane hidden" data-pane="offers">
@@ -1826,7 +1864,7 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-10-12.1';
+const APP_VERSION = '2026-10-12.2';
 let updShown = false;
 async function checkForUpdate(){
   try{
@@ -3163,6 +3201,104 @@ function resetPlanForm(){
   $('plan-tests').value = ''; $('plan-active').checked = true; $('plan-err').textContent = ''; $('plan-form-title').textContent = '➕ Add a plan';
 }
 $('btn-plan-new').addEventListener('click', resetPlanForm);
+/* ---------------- EXPENSES (Revenue → 💸 Expenses) ---------------- */
+let exData = null;
+function exMonthRange(){
+  const v = $('ex-month').value || isoToday().slice(0, 7);
+  const [y, m] = v.split('-').map(Number);
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return { from: `${v}-01`, to: `${v}-${String(last).padStart(2, '0')}`, label: new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' }) };
+}
+async function loadExpenses(){
+  revTouch();
+  if (!$('ex-month').value) $('ex-month').value = isoToday().slice(0, 7);
+  if (!$('ex-date').value) $('ex-date').value = isoToday();
+  const rg = exMonthRange();
+  $('ex-rows').innerHTML = '<p class="muted">Loading…</p>';
+  let r;
+  try{ r = await rpc('sa_web_expenses', { ...revCreds(), p_from: rg.from, p_to: rg.to }); }
+  catch(e){
+    $('ex-rows').innerHTML = /\(404\)/.test(String(e && e.message))
+      ? '<p class="err">Expenses are not set up in the database yet. Please run <b>w_expenses.sql</b> in Supabase → SQL Editor.</p>'
+      : '<p class="err">Connection error.</p>';
+    return;
+  }
+  if (revAuthFail(r)) return;
+  if (!r || !r.ok){ $('ex-rows').innerHTML = `<p class="err">${esc((r && r.error) || 'Unable to load.')}</p>`; return; }
+  exData = r;
+  if (!$('ex-cat').options.length) $('ex-cat').innerHTML = '<option value="">— Choose —</option>' + r.categories.map(c => `<option>${esc(c)}</option>`).join('');
+  const kpi = (id, val, note, color) => { const k = $(id); k.querySelector('b').textContent = inr(val); k.querySelector('b').style.color = color || ''; k.querySelector('.kc').textContent = note; };
+  kpi('ex-k-in', r.income, rg.label);
+  kpi('ex-k-out', r.expenses, `${r.rows.filter(x => x.status === 'active').length} entr${r.rows.filter(x => x.status === 'active').length === 1 ? 'y' : 'ies'}`);
+  kpi('ex-k-net', r.profit, Number(r.profit) >= 0 ? 'Profit' : 'Loss', Number(r.profit) >= 0 ? '#27ae60' : '#e74c3c');
+  $('ex-copy').innerHTML = r.to_copy > 0 ? `<div class="card" style="margin:0; display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+      <span>🔁 ${r.to_copy} monthly expense${r.to_copy === 1 ? '' : 's'} from last month ${r.to_copy === 1 ? 'is' : 'are'} not added to ${esc(rg.label)} yet.</span>
+      <button class="btn btn-primary" id="btn-ex-copy">Copy into ${esc(rg.label)}</button></div>` : '';
+  $('ex-cats').innerHTML = r.by_category.length ? `<table class="report"><thead><tr><th>Category</th><th class="num">Entries</th><th class="num">Amount</th><th class="num">Share</th></tr></thead><tbody>${r.by_category.map(c => `<tr><td>${esc(c.category)}</td><td class="num">${c.count}</td><td class="num"><b>${inr(c.amount)}</b></td><td class="num">${Number(r.expenses) ? Math.round(100 * Number(c.amount) / Number(r.expenses)) : 0}%</td></tr>`).join('')}</tbody></table>`
+    : '<p class="muted">No expenses this month.</p>';
+  $('ex-trend').innerHTML = `<table class="report"><thead><tr><th>Month</th><th class="num">Received</th><th class="num">Expenses</th><th class="num">Profit</th></tr></thead><tbody>${(r.trend || []).map(t => { const pr = Number(t.income) - Number(t.expenses);
+      return `<tr><td>${esc(t.month)}</td><td class="num">${inr(t.income)}</td><td class="num">${inr(t.expenses)}</td><td class="num" style="color:${pr >= 0 ? '#27ae60' : '#e74c3c'}; font-weight:600;">${inr(pr)}</td></tr>`; }).join('')}</tbody></table>`;
+  $('ex-rows').innerHTML = r.rows.length ? `<table class="report"><thead><tr><th>Date</th><th>Category</th><th>Paid to / for</th><th class="num">Amount</th><th>Paid by</th><th>Bill</th><th>Status</th><th></th></tr></thead><tbody>${r.rows.map(x => `
+      <tr style="${x.status === 'void' ? 'opacity:.55;' : ''}"><td style="white-space:nowrap;">${dmy(x.spent_on)}</td><td>${esc(x.category)}</td>
+        <td>${x.vendor ? '<b>' + esc(x.vendor) + '</b><br>' : ''}<span class="muted">${esc(x.description)}</span>${x.is_monthly ? ' <span class="muted" style="font-size:11px;">🔁 monthly</span>' : ''}</td>
+        <td class="num"><b>${inr(x.amount)}</b></td><td>${esc(x.method || '—')}${x.reference ? '<div class="muted" style="font-size:11px;">' + esc(x.reference) + '</div>' : ''}</td>
+        <td>${x.bill_link && /^https?:\/\//i.test(x.bill_link) ? `<a href="${esc(x.bill_link)}" target="_blank" rel="noopener">📎 Open</a>` : '—'}</td>
+        <td>${x.status === 'void' ? `Void<div class="muted" style="font-size:11px;">${esc(x.void_reason || '')}</div>` : (x.locked ? '🔒 Closed month' : 'Active')}</td>
+        <td>${x.status === 'active' && !x.locked ? `<button class="btn ex-void" data-id="${x.id}" style="padding:4px 9px;">Void</button>` : ''}</td></tr>`).join('')}</tbody></table>`
+    : `<p class="muted">No expenses recorded for ${esc(rg.label)}.</p>`;
+}
+document.querySelector('.rev-tab[data-tab="exp"]').addEventListener('click', loadExpenses);
+$('btn-ex-load').addEventListener('click', loadExpenses);
+$('ex-month').addEventListener('change', loadExpenses);
+$('ex-copy').addEventListener('click', async (e) => {
+  const b = e.target.closest('#btn-ex-copy'); if (!b) return;
+  b.disabled = true;
+  try{
+    const r = await rpc('sa_web_expense_copy_monthly', { ...revCreds(), p_month: exMonthRange().from });
+    if (revAuthFail(r)) return;
+    toast(r && r.ok ? `${r.copied} expense(s) copied. Add the new invoice number / bill link if needed.` : ((r && r.error) || 'Could not copy.'), r && r.ok ? 'ok' : 'err');
+  }catch(_e){ toast('Connection error.', 'err'); }
+  loadExpenses();
+});
+$('ex-rows').addEventListener('click', async (e) => {
+  const b = e.target.closest('.ex-void'); if (!b) return;
+  const x = (exData && exData.rows || []).find(r => String(r.id) === b.dataset.id); if (!x) return;
+  const reason = prompt(`Void this expense?\n\n${dmy(x.spent_on)} · ${x.description} · ${inr(x.amount)}\n\nThe entry is kept (marked void) and not counted. Reason:`);
+  if (reason === null) return;
+  if (reason.trim().length < 3){ toast('Please give a reason (at least 3 characters).', 'err'); return; }
+  try{
+    const r = await rpc('sa_web_expense_void', { ...revCreds(), p_id: x.id, p_reason: reason.trim() });
+    if (revAuthFail(r)) return;
+    toast(r && r.ok ? 'Expense voided.' : ((r && r.error) || 'Could not void.'), r && r.ok ? 'ok' : 'err');
+  }catch(_e){ toast('Connection error.', 'err'); }
+  loadExpenses();
+});
+$('btn-ex-add').addEventListener('click', async () => {
+  const errEl = $('ex-err'); errEl.textContent = ''; revTouch();
+  const date = $('ex-date').value, cat = $('ex-cat').value, desc = $('ex-desc').value.trim(), amount = Number($('ex-amount').value);
+  const link = $('ex-link').value.trim();
+  if (!date){ errEl.textContent = 'Please enter the date.'; return; }
+  if (!cat){ errEl.textContent = 'Please choose a category.'; return; }
+  if (desc.length < 3){ errEl.textContent = 'Please describe the expense.'; return; }
+  if (!(amount > 0)){ errEl.textContent = 'Please enter the amount.'; return; }
+  if (link && !/^https?:\/\//i.test(link)){ errEl.textContent = 'The bill link must start with http:// or https://'; return; }
+  if (!confirm(`Save this expense?\n\n${dmy(date)} · ${cat}\n${$('ex-vendor').value.trim() ? $('ex-vendor').value.trim() + ' — ' : ''}${desc}\n${inr(amount)} by ${$('ex-method').value}`)) return;
+  const b = $('btn-ex-add'); b.disabled = true;
+  try{
+    const r = await rpc('sa_web_expense_add', { ...revCreds(), p_spent_on: date, p_category: cat, p_vendor: $('ex-vendor').value.trim(),
+      p_description: desc, p_amount: amount, p_method: $('ex-method').value, p_reference: $('ex-ref').value.trim(),
+      p_bill_link: link, p_is_monthly: $('ex-monthly').checked });
+    if (revAuthFail(r)) return;
+    if (r && r.ok){
+      toast('Expense saved.', 'ok');
+      ['ex-vendor', 'ex-desc', 'ex-amount', 'ex-ref', 'ex-link'].forEach(id => { $(id).value = ''; }); $('ex-monthly').checked = false;
+      if (date.slice(0, 7) !== $('ex-month').value) $('ex-month').value = date.slice(0, 7);
+      loadExpenses();
+    } else errEl.textContent = (r && r.error) || 'Expense could not be saved.';
+  }catch(_e){ errEl.textContent = 'Connection error.'; }
+  finally{ b.disabled = false; }
+});
+
 /* ---------------- OFFERS (Revenue → 🎁 Offers) ---------------- */
 let revOffers = [];
 const OF_STATE = { running: ['Running', '#27ae60'], upcoming: ['Upcoming', '#f1c40f'], ended: ['Ended', '#95a5a6'], off: ['Off', '#95a5a6'] };
