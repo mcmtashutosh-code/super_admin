@@ -12,7 +12,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-i8uvFZC5tnkD1wdw3imUvyw8SybEGfbqzrXONvMjFjA='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-PSsYntm5dEA2Oldc1XYCSvsKErq7wlYZnj6Sfpn7aXU='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Super Admin — Dhyeodaya</title>
@@ -173,6 +173,13 @@
   @media (max-width:720px){ .kpis{ grid-template-columns:1fr 1fr; } .ren-buckets{ grid-template-columns:repeat(3, 1fr); } }
   .sub-box{ margin-top:14px; border-top:1px solid var(--line-soft); padding-top:4px; }
   .report-wrap{ overflow-x:auto; margin-top:12px; }
+  .fees-tiles{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; }
+  .fees-tile{ border:1px solid var(--line-soft); border-radius:10px; padding:10px 12px; cursor:pointer; }
+  .fees-tile b{ display:block; font-size:20px; } .fees-tile span{ font-size:12px; color:var(--text-dim); } .fees-tile small{ display:block; font-size:12px; margin-top:2px; }
+  .fees-tile.red{ border-color:rgba(231,76,60,.55); } .fees-tile.amber{ border-color:rgba(243,156,18,.55); }
+  .fees-chips{ display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; }
+  .fees-chip{ border:1px solid var(--line-soft); border-radius:999px; padding:5px 12px; font-size:13px; cursor:pointer; background:transparent; color:inherit; }
+  .fees-chip.on{ background:#16a085; color:#06231e; border-color:#16a085; font-weight:700; }
   table.report{ width:100%; border-collapse:collapse; font-size:13px; min-width:680px; }
   table.report th, table.report td{ padding:8px 10px; border-bottom:1px solid var(--line-soft); text-align:right; white-space:nowrap; }
   table.report th:first-child, table.report td:first-child{ text-align:left; }
@@ -948,6 +955,26 @@
     </div>
 
     <div class="card">
+      <details id="fees-box">
+        <summary>⏳ Fees &amp; renewals</summary>
+        <div id="fees-locked" style="margin-top:12px;">
+          <p class="muted" style="margin:0 0 8px;">Amounts are protected by the revenue PIN.</p>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <input id="fees-pin" type="password" inputmode="numeric" maxlength="6" placeholder="Revenue PIN" autocomplete="off" style="max-width:180px;">
+            <button class="btn btn-primary" id="btn-fees-unlock" type="button">🔓 Show fees</button>
+          </div>
+          <div class="err" id="fees-err"></div>
+        </div>
+        <div id="fees-open" class="hidden" style="margin-top:12px;">
+          <div class="fees-tiles" id="fees-tiles"></div>
+          <div class="fees-chips" id="fees-chips"></div>
+          <div class="report-wrap" id="fees-table"></div>
+          <p class="muted" style="font-size:12px; margin-top:8px;">Fee due = renewal price of a paying institute whose plan has ended (not suspended or cancelled). Total paid = all payments received so far, after refunds. Reminder emails and their days (7, 3, 1 …) are set in 💰 Revenue → Renewals → Reminder settings.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="card">
       <details id="reports-box">
         <summary>📄 Reports</summary>
         <p class="muted" style="margin-top:10px;">The overall report compares all institutes; the institute report is the same full report the institute admin sees. Revenue is not included (see Revenue).</p>
@@ -1554,7 +1581,7 @@ const SECTIONS = [
   ['account-box', '👤', 'My account'], ['create-box', '➕', 'Add institute'], ['move-box', '🔀', 'Transfer student'],
   ['support-box', '📨', 'Support'], ['report-box', '📊', 'Activity report'], ['rp-box', '💳', 'Record payment'],
   ['email-box', '✉️', 'Email institutes'], ['banner-box', '📢', 'Banner'], ['rev-box', '💰', 'Revenue'], ['audit-box', '🧾', 'Audit'],
-  ['terms-box', '📜', 'Terms'], ['reports-box', '📄', 'Reports'], ['del-box', '🗑', 'Deleted accounts'], ['portal-card', '🔗', 'Portal URL']];
+  ['terms-box', '📜', 'Terms'], ['fees-box', '⏳', 'Fees & renewals'], ['reports-box', '📄', 'Reports'], ['del-box', '🗑', 'Deleted accounts'], ['portal-card', '🔗', 'Portal URL']];
 function secCard(id){ const el = $(id); return id === 'portal-card' ? el : el.closest('.card'); }
 function openSection(id, force){
   const card = secCard(id), det = id === 'portal-card' ? null : $(id);
@@ -2094,10 +2121,10 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-11-06.7';
+const APP_VERSION = '2026-11-06.8';
 /* What's new: shown in the update banner, and once after the app updates. Newest first, keep a few.
    Add an entry here with every new APP_VERSION. */
-const APP_NOTES = /*NOTES*/[{"v": "2026-11-06.7", "date": "6 Nov 2026", "items": ["Small fixes."]},{"v": "2026-11-06.5", "date": "6 Nov 2026", "items": ["Reports are saved as PDF under the institute's name and the period (for example: Sunrise Academy - Institute Report - 01 Oct 2026 to 31 Oct 2026)."]},{"v": "2026-11-06.4", "date": "6 Nov 2026", "items": ["New 'Reports': an overall report of all institutes and a full report of any one institute, for any period, to print or save as PDF."]},{"v": "2026-11-06.3", "date": "6 Nov 2026", "items": ["New section 'Deleted accounts': how many student accounts each institute has deleted, by students or admins."]},{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
+const APP_NOTES = /*NOTES*/[{"v": "2026-11-06.8", "date": "6 Nov 2026", "items": ["New 'Fees & renewals': which institute's fee is due, how much each has paid, and whose plan ends within 1, 3, 5 or 7 days, with WhatsApp reminder and Record payment buttons."]},{"v": "2026-11-06.7", "date": "6 Nov 2026", "items": ["Small fixes."]},{"v": "2026-11-06.5", "date": "6 Nov 2026", "items": ["Reports are saved as PDF under the institute's name and the period (for example: Sunrise Academy - Institute Report - 01 Oct 2026 to 31 Oct 2026)."]},{"v": "2026-11-06.4", "date": "6 Nov 2026", "items": ["New 'Reports': an overall report of all institutes and a full report of any one institute, for any period, to print or save as PDF."]},{"v": "2026-11-06.3", "date": "6 Nov 2026", "items": ["New section 'Deleted accounts': how many student accounts each institute has deleted, by students or admins."]},{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
 const WN_KEY = 'dy_seen_version_superadmin';
 let updNewNotes = [];
 function wnParse(text){
@@ -2529,6 +2556,7 @@ function revLock(){
   $('rev-chpin-box').classList.add('hidden');
   ['rev-pin','rev-setup-pass','rev-setup-pin','rev-setup-pin2','chpin-old','chpin-new','chpin-new2'].forEach(id => { $(id).value = ''; });
   $('rev-lock-err').textContent = '';
+  if ($('fees-open')){ $('fees-open').classList.add('hidden'); $('fees-locked').classList.remove('hidden'); $('fees-table').innerHTML = ''; $('fees-tiles').innerHTML = ''; }
 }
 const PIN_MSG = { pin_invalid: 'Incorrect PIN.', pin_locked: 'Too many wrong PINs. Revenue is locked for 15 minutes.', no_pin: 'Please set up your revenue PIN first.' };
 function showPinMode(hasPin){
@@ -3849,6 +3877,84 @@ function renderOverview(){
       return `<tr><td>#${p.id}</td><td>${dmy(p.paid_on)}</td><td>${esc(p.name)}</td><td class="num"><b>${inr(p.amount)}</b></td><td>${esc(p.method || '—')}</td><td>${esc(p.plan || '—')}</td><td><span class="pill ${st[1]}">${esc(st[0])}</span></td></tr>`; }).join('') + '</tbody></table>'
     : '<p class="muted">No payments recorded yet.</p>';
 }
+/* ---------------- FEES & RENEWALS (who owes, who paid, whose plan ends in 1 / 3 / 5 / 7 days) ---------------- */
+let feesRows = [], feesFilter = 'soon7';
+const FEES_FILTERS = [['due', '🔴 Fee due'], ['soon1', 'Ends in 1 day'], ['soon3', 'In 3 days'], ['soon5', 'In 5 days'], ['soon7', 'In 7 days'],
+                      ['soon30', 'In 30 days'], ['paid', 'Paid / active'], ['all', 'All institutes']];
+function feesKind(s){
+  if (s.account_type === 'main' || s.no_end_date) return 'none';
+  if (['suspended', 'cancelled', 'churned'].includes(s.status)) return 'off';
+  if (s.days_left !== null && s.days_left !== undefined && s.days_left <= 0) return s.paying ? 'due' : 'ended';
+  return 'running';
+}
+function feesMatch(s, f){
+  const k = feesKind(s), d = s.days_left;
+  if (f === 'all') return true;
+  if (f === 'due') return k === 'due';
+  if (f === 'paid') return k === 'running' && s.paying;
+  const n = { soon1: 1, soon3: 3, soon5: 5, soon7: 7, soon30: 30 }[f];
+  return k === 'running' && d !== null && d !== undefined && d >= 0 && d <= n;
+}
+function feesPhone(code){ const i = institutes.find(x => x.code === code); return i ? (i.contact_phone || '') : ''; }
+function feesRender(){
+  const sum = f => feesRows.filter(s => feesMatch(s, f));
+  const amt = list => list.reduce((t, s) => t + Number(s.price || 0), 0);
+  const due = sum('due'), paidTotal = feesRows.reduce((t, s) => t + Number(s.lifetime_paid || 0), 0);
+  const tile = (f, label, list, cls, extra) => `<div class="fees-tile ${cls || ''}" data-f="${f}"><span>${label}</span><b>${list.length}</b><small>${extra != null ? extra : inr(amt(list)) + ' renewal'}</small></div>`;
+  $('fees-tiles').innerHTML = tile('due', '🔴 Fee due (plan ended)', due, 'red', inr(amt(due)) + ' due')
+    + tile('soon1', 'Ends within 1 day', sum('soon1'), 'amber') + tile('soon3', 'Within 3 days', sum('soon3'), 'amber')
+    + tile('soon5', 'Within 5 days', sum('soon5'), 'amber') + tile('soon7', 'Within 7 days', sum('soon7'), 'amber')
+    + `<div class="fees-tile" data-f="paid"><span>💰 Total paid (all institutes)</span><b style="font-size:17px;">${inr(paidTotal)}</b><small>${feesRows.filter(s => s.paying).length} paying institutes</small></div>`;
+  $('fees-chips').innerHTML = FEES_FILTERS.map(([f, l]) => `<button type="button" class="fees-chip ${f === feesFilter ? 'on' : ''}" data-f="${f}">${l} (${sum(f).length})</button>`).join('');
+  const list = sum(feesFilter).sort((a, b) => (a.days_left ?? 1e9) - (b.days_left ?? 1e9));
+  $('fees-table').innerHTML = list.length ? `<table class="report"><thead><tr><th style="text-align:left;">Institute</th><th>Plan</th><th>Paid until</th><th class="num">Days left</th><th class="num">Renewal fee</th><th class="num">Fee due</th><th class="num">Total paid</th><th>Last payment</th><th>Status</th><th></th></tr></thead><tbody>` +
+    list.map(s => {
+      const k = feesKind(s), st = SUB_STATUS[s.status] || [s.status, 'neutral'];
+      const dl = s.days_left === null || s.days_left === undefined ? '—' : (s.days_left > 0 ? `${s.days_left}` : (s.days_left === 0 ? '<b style="color:#f39c12;">today</b>' : `<b style="color:#ff8a7d;">${-s.days_left} overdue</b>`));
+      const wa = waLink({ name: s.name, plan: s.plan, paid_until: s.paid_until, days_left: s.days_left, amount: s.price, phone: feesPhone(s.code) });
+      return `<tr><td style="text-align:left;">${esc(s.name)} <span class="muted">(${esc(s.code)})</span></td><td>${esc(s.plan || '—')}</td><td>${s.no_end_date ? '—' : dmy(s.paid_until)}</td><td class="num">${dl}</td>
+        <td class="num">${s.price != null ? inr(s.price) : '—'}</td><td class="num">${k === 'due' ? '<b style="color:#ff8a7d;">' + inr(s.price) + '</b>' : '—'}</td><td class="num">${inr(s.lifetime_paid)}</td>
+        <td>${s.last_paid_on ? dmy(s.last_paid_on) + ' · ' + inr(s.last_amount) : '—'}</td><td><span class="pill ${st[1]}">${esc(st[0])}</span></td>
+        <td style="white-space:nowrap;">${wa ? `<a class="btn" href="${esc(wa)}" target="_blank" rel="noopener" style="padding:4px 9px;">💬 Remind</a> ` : ''}<button class="btn fees-pay" type="button" data-code="${esc(s.code)}" style="padding:4px 9px;">➕ Payment</button></td></tr>`;
+    }).join('') + '</tbody></table>'
+    : '<p class="muted">No institute in this list.</p>';
+}
+async function feesLoad(){
+  if (!revPin){ $('fees-locked').classList.remove('hidden'); $('fees-open').classList.add('hidden'); return; }
+  $('fees-locked').classList.add('hidden'); $('fees-open').classList.remove('hidden');
+  $('fees-table').innerHTML = '<p class="muted">Loading...</p>';
+  revTouch();
+  try{
+    const r = await rpc('sa_web_revenue', { ...revCreds(), p_granularity: 'month', p_from: isoToday(), p_to: isoToday() });
+    if (revAuthFail(r)){ $('fees-locked').classList.remove('hidden'); $('fees-open').classList.add('hidden'); $('fees-err').textContent = 'Please enter the PIN again.'; return; }
+    if (!r || !r.ok){ $('fees-table').innerHTML = '<p class="muted">Unable to load.</p>'; return; }
+    feesRows = r.status || [];
+    if (!institutes.length){ try{ const l = await rpc('sa_web_list', creds()); if (l && l.ok) institutes = l.institutes || []; }catch(_e){} }
+    feesRender();
+  }catch(e){ $('fees-table').innerHTML = '<p class="muted">Connection error.</p>'; }
+}
+$('btn-fees-unlock').addEventListener('click', async () => {
+  const pin = $('fees-pin').value.trim(); $('fees-err').textContent = '';
+  if (!/^\d{4,6}$/.test(pin)){ $('fees-err').textContent = 'Please enter your 4–6 digit PIN.'; return; }
+  const b = $('btn-fees-unlock'); b.disabled = true;
+  try{
+    const r = await rpc('sa_web_plans', { p_username: sa.u, p_password: sa.p, p_pin: pin });
+    if (r && (r.error === 'invalid' || r.error === 'locked')){ handleAuthError(r); return; }
+    if (!r || !r.ok){ $('fees-err').textContent = (r && PIN_MSG[r.error]) || 'Unable to unlock. Please try again.'; $('fees-pin').value = ''; return; }
+    revPin = pin; $('fees-pin').value = ''; revTouch();
+    await feesLoad();
+  }catch(e){ $('fees-err').textContent = 'Connection error.'; }
+  finally{ b.disabled = false; }
+});
+$('fees-pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-fees-unlock').click(); });
+$('fees-box').addEventListener('toggle', () => { if ($('fees-box').open) feesLoad(); });
+$('fees-box').addEventListener('click', (e) => {
+  const f = e.target.closest('[data-f]');
+  if (f){ feesFilter = f.dataset.f; feesRender(); return; }
+  const p = e.target.closest('.fees-pay');
+  if (p){ rpWantCode = p.dataset.code; openSection('rp-box', true); }
+});
+
 $('rev-renewals').addEventListener('click', (e) => {
   const b = e.target.closest('.ren-pay'); if (!b) return;
   showRevTab('pays'); $('pay-inst').value = b.dataset.code; prefillPayment();
