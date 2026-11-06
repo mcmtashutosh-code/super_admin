@@ -12,7 +12,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-4TMHpmPfKakpi0mF/ZshnzPwDJR1JxHdC7BF7xmLRso='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-1Dv+5VkUkbHhtrx7EBA2qquPsakgv9ar3N7FwgZojtU='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Super Admin — Dhyeodaya</title>
@@ -948,6 +948,32 @@
     </div>
 
     <div class="card">
+      <details id="reports-box">
+        <summary>📄 Reports</summary>
+        <p class="muted" style="margin-top:10px;">The overall report compares all institutes; the institute report is the same full report the institute admin sees. Revenue is not included (see Revenue).</p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px;">
+          <select id="srp-kind" class="sel">
+            <option value="this_month">This month</option>
+            <option value="last_month">Last month</option>
+            <option value="last_30" selected>Last 30 days</option>
+            <option value="last_90">Last 3 months</option>
+            <option value="session">This session (April to today)</option>
+            <option value="custom">Choose dates…</option>
+          </select>
+          <span id="srp-custom" style="display:none; gap:6px; align-items:center;"><input type="date" id="srp-from"> to <input type="date" id="srp-to"></span>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px;">
+          <button class="btn" id="btn-srp-all" type="button">🌐 Overall platform report</button>
+          <select class="sel" id="srp-inst"><option value="">Choose an institute…</option></select>
+          <button class="btn" id="btn-srp-one" type="button">🏫 Institute report</button>
+          <button class="btn hidden" id="btn-srp-print" type="button">🖨 Print / Save as PDF</button>
+        </div>
+        <div class="muted" id="srp-msg" style="margin-top:8px;"></div>
+        <iframe id="srp-frame" title="Report" style="display:none; width:100%; border:1px solid var(--line-soft); border-radius:10px; background:#fff; margin-top:12px; min-height:600px;"></iframe>
+      </details>
+    </div>
+
+    <div class="card">
       <details id="del-box">
         <summary>🗑 Deleted accounts</summary>
         <p class="muted" style="margin-top:10px;">Student accounts deleted in each institute (by the student or by the institute admin). Only the last 3 digits of the mobile number are kept.</p>
@@ -1528,7 +1554,7 @@ const SECTIONS = [
   ['account-box', '👤', 'My account'], ['create-box', '➕', 'Add institute'], ['move-box', '🔀', 'Transfer student'],
   ['support-box', '📨', 'Support'], ['report-box', '📊', 'Activity report'], ['rp-box', '💳', 'Record payment'],
   ['email-box', '✉️', 'Email institutes'], ['banner-box', '📢', 'Banner'], ['rev-box', '💰', 'Revenue'], ['audit-box', '🧾', 'Audit'],
-  ['terms-box', '📜', 'Terms'], ['del-box', '🗑', 'Deleted accounts'], ['portal-card', '🔗', 'Portal URL']];
+  ['terms-box', '📜', 'Terms'], ['reports-box', '📄', 'Reports'], ['del-box', '🗑', 'Deleted accounts'], ['portal-card', '🔗', 'Portal URL']];
 function secCard(id){ const el = $(id); return id === 'portal-card' ? el : el.closest('.card'); }
 function openSection(id, force){
   const card = secCard(id), det = id === 'portal-card' ? null : $(id);
@@ -1850,6 +1876,157 @@ async function loadDeletions(){
   }catch(e){ $('del-sum').textContent = 'Connection error.'; }
 }
 $('del-box').addEventListener('toggle', () => { if ($('del-box').open) loadDeletions(); });
+/* ---------------- REPORTS (printable / save as PDF) ---------------- */
+const dyE = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const dyN = v => (v === null || v === undefined || v === '') ? '—' : Number(v).toLocaleString('en-IN');
+const dyP = v => (v === null || v === undefined || v === '') ? '—' : `${v}%`;
+const dyD = d => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : '—';
+const dyIso = d => { const z = new Date(d.getTime() + 330 * 60000); return z.toISOString().slice(0, 10); };   // date in India
+function dyPeriod(kind, from, to){
+  const now = new Date(Date.now() + 330 * 60000), y = now.getUTCFullYear(), m = now.getUTCMonth(), d = now.getUTCDate();
+  const iso = (Y, M, D) => new Date(Date.UTC(Y, M, D)).toISOString().slice(0, 10);
+  const today = iso(y, m, d);
+  if (kind === 'this_month') return [iso(y, m, 1), today];
+  if (kind === 'last_month') return [iso(y, m - 1, 1), iso(y, m, 0)];
+  if (kind === 'last_30') return [iso(y, m, d - 29), today];
+  if (kind === 'last_90') return [iso(y, m, d - 89), today];
+  if (kind === 'session'){ const sy = m >= 3 ? y : y - 1; return [iso(sy, 3, 1), today]; }      // Apr → today
+  return [from, to];
+}
+const DY_CSS = `@page{size:A4 portrait;margin:12mm 12mm}
+body{font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#1b2a41;margin:0;font-size:12px}
+.hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #0f7a66;padding-bottom:8px;margin-bottom:10px}
+h1{font-size:21px;margin:0} .sub{color:#4a5568;font-size:12px;margin-top:3px} .brand{text-align:right;color:#0f7a66;font-weight:700;font-size:13px}
+.brand small{display:block;color:#6b7a8c;font-weight:400}
+h2{font-size:14px;margin:16px 0 6px;color:#0f7a66;border-bottom:1px solid #d6dde8;padding-bottom:3px;break-after:avoid}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tile{border:1px solid #d6dde8;border-radius:6px;padding:7px 8px;break-inside:avoid} .tile span{display:block;font-size:10.5px;color:#5a6878} .tile b{font-size:18px}
+table{width:100%;border-collapse:collapse;margin-top:4px;break-inside:auto} tr{break-inside:avoid}
+th{background:#1b2a41;color:#fff;font-size:10.5px;padding:5px;text-align:left} td{border-bottom:1px solid #e3e8ef;padding:4px 5px}
+td.n,th.n{text-align:right} tbody tr:nth-child(even) td{background:#f5f8fb}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px} .muted{color:#6b7a8c} .ft{margin-top:16px;color:#6b7a8c;font-size:10.5px;border-top:1px solid #d6dde8;padding-top:6px}
+.wide{size:A4 landscape}`;
+function dyTable(head, rows, empty){
+  if (!rows.length) return `<p class="muted">${empty || 'No data for this period.'}</p>`;
+  return `<table><thead><tr>${head.map(h => `<th class="${h.n ? 'n' : ''}">${dyE(h.t || h)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+}
+function dyInstituteReportHtml(r){
+  const I = r.institute || {}, S = r.students || {}, L = r.live || {}, T = r.tests || {}, P = r.practice || {}, C = r.challenge || {}, K = r.content || {}, E = r.engagement || {}, Q = I.quota || {};
+  const t = (k, v) => `<div class="tile"><span>${k}</span><b>${v}</b></div>`;
+  const testAttempts = ['mock', 'pyq', 'ca'].reduce((a, k) => a + ((T[k] || {}).attempts || 0), 0);
+  const pct = (a, b) => b ? Math.round(1000 * a / b) / 10 : null;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${dyE(I.name)} — Institute report ${dyE(r.period.from)} to ${dyE(r.period.to)}</title><style>${DY_CSS}</style></head><body>
+  <div class="hd"><div><h1>${dyE(I.name)} <span class="muted" style="font-size:14px">(${dyE(I.code)})</span></h1>
+    <div class="sub">Institute report · ${dyD(r.period.from)} – ${dyD(r.period.to)} · generated ${new Date(r.generated_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div></div>
+    <div class="brand">Dhyeodaya<small>तैयारी से सफलता तक</small></div></div>
+
+  <h2>At a glance</h2>
+  <div class="tiles">${t('Students (total)', dyN(S.total))}${t('New students', dyN(S.new))}${t('Active students', dyN(S.active))}${t('Live exams held', dyN(L.exams))}
+    ${t('Mock / PYQ / CA tests taken', dyN(testAttempts))}${t('Practice sessions', dyN(P.sessions))}${t('Challenge answers', dyN(C.attempts))}${t('Accounts deleted', dyN(S.deleted))}</div>
+
+  <h2>Students</h2>
+  ${dyTable(['Measure', { t: 'Count', n: 1 }, { t: 'Share', n: 1 }], [
+    ['Registered (total)', S.total, ''], ['Approved', S.approved, dyP(pct(S.approved, S.total))], ['Waiting for approval', S.pending, ''],
+    ['Joined in this period', S.new, ''], ['Active in this period (took any test, practice or challenge)', S.active, dyP(pct(S.active, S.total))],
+    ['Accounts deleted in this period', S.deleted, '']].map(x => `<tr><td>${x[0]}</td><td class="n">${dyN(x[1])}</td><td class="n">${x[2]}</td></tr>`))}
+
+  <h2>Live exams</h2>
+  ${dyTable(['Exam', 'Date', { t: 'Questions', n: 1 }, { t: 'Students', n: 1 }, { t: 'Passed', n: 1 }, { t: 'Pass %', n: 1 }, { t: 'Average marks', n: 1 }],
+    (L.list || []).map(x => `<tr><td>${dyE(x.title)}${x.running ? ' <span class="muted">(current)</span>' : ''}</td><td>${dyD(x.date)}</td><td class="n">${dyN(x.questions)}</td><td class="n">${dyN(x.students)}</td><td class="n">${dyN(x.passed)}</td><td class="n">${dyP(pct(x.passed, x.students))}</td><td class="n">${x.avg == null ? '—' : x.avg}</td></tr>`),
+    'No live exam was held in this period.')}
+  ${Q.limit != null ? `<p class="muted" style="margin:4px 0 0">Live-test plan: ${dyN(Q.used)} of ${dyN((Q.limit || 0) + (Q.extra || 0))} used in the current cycle (ends ${dyD(Q.cycle_end)}).</p>` : ''}
+
+  <h2>Top 10 in live exams</h2>
+  ${dyTable([{ t: 'Rank', n: 1 }, 'Student', 'Mobile', { t: 'Exams', n: 1 }, { t: 'Average %', n: 1 }, { t: 'Passed', n: 1 }],
+    (r.top_live || []).map((x, i) => `<tr><td class="n">${i + 1}</td><td>${dyE(x.name)}</td><td>${dyE(x.mobile)}</td><td class="n">${x.tests}</td><td class="n">${dyP(x.avg_pct)}</td><td class="n">${x.passed}</td></tr>`), 'No live-exam results in this period.')}
+
+  <div class="two"><div>
+  <h2>Mock tests, PYQ and current affairs</h2>
+  ${dyTable(['Type', { t: 'Tests taken', n: 1 }, { t: 'Students', n: 1 }, { t: 'Average %', n: 1 }],
+    [['mock', 'Mock tests'], ['pyq', 'Previous year papers'], ['ca', 'Current affairs quizzes']].map(([k, label]) => { const x = T[k] || {};
+      return `<tr><td>${label}</td><td class="n">${dyN(x.attempts || 0)}</td><td class="n">${dyN(x.students || 0)}</td><td class="n">${dyP(x.avg_pct)}</td></tr>`; }))}
+  </div><div>
+  <h2>Practice</h2>
+  ${dyTable(['Measure', { t: 'Value', n: 1 }], [['Sessions', dyN(P.sessions)], ['Students who practised', dyN(P.students)], ['Questions answered', dyN(P.questions)], ['Accuracy', dyP(P.accuracy)]]
+    .map(x => `<tr><td>${x[0]}</td><td class="n">${x[1]}</td></tr>`))}
+  </div></div>
+  ${(P.subjects || []).length ? `<h2>Practice by subject</h2>${dyTable(['Subject', { t: 'Sessions', n: 1 }, { t: 'Questions', n: 1 }, { t: 'Accuracy', n: 1 }],
+    P.subjects.map(x => `<tr><td>${dyE(x.subject)}</td><td class="n">${dyN(x.sessions)}</td><td class="n">${dyN(x.questions)}</td><td class="n">${dyP(x.accuracy)}</td></tr>`))}` : ''}
+
+  ${(r.top_mock || []).length ? `<h2>Top performers in mock tests (2 or more tests)</h2>${dyTable([{ t: 'Rank', n: 1 }, 'Student', 'Mobile', { t: 'Tests', n: 1 }, { t: 'Average %', n: 1 }],
+    r.top_mock.map((x, i) => `<tr><td class="n">${i + 1}</td><td>${dyE(x.name)}</td><td>${dyE(x.mobile)}</td><td class="n">${x.tests}</td><td class="n">${dyP(x.avg_pct)}</td></tr>`))}` : ''}
+
+  <h2>Daily challenge</h2>
+  <div class="two"><div>${dyTable(['Measure', { t: 'Value', n: 1 }], [['Challenges posted', dyN(C.posted)], ['Answers given', dyN(C.attempts)], ['Students who took part', dyN(C.students)], ['Correct answers', dyP(C.accuracy)]]
+    .map(x => `<tr><td>${x[0]}</td><td class="n">${x[1]}</td></tr>`))}</div>
+  <div>${dyTable([{ t: 'Rank', n: 1 }, 'Student', 'Mobile', { t: 'Points', n: 1 }], (C.top || []).map((x, i) => `<tr><td class="n">${i + 1}</td><td>${dyE(x.name)}</td><td>${dyE(x.mobile)}</td><td class="n">${dyN(x.points)}</td></tr>`), 'No challenge answers in this period.')}</div></div>
+
+  <div class="two"><div>
+  <h2>Question bank</h2>
+  ${dyTable(['Bank', { t: 'Questions', n: 1 }], [['Practice questions', K.practice_questions], ['Live exam questions', K.exam_questions], ['Previous year questions', K.pyq_questions],
+    ['Current affairs questions', K.ca_questions], ['Current affairs added in this period', K.ca_added]].map(x => `<tr><td>${x[0]}</td><td class="n">${dyN(x[1])}</td></tr>`))}
+  </div><div>
+  <h2>Reach and communication</h2>
+  ${dyTable(['Measure', { t: 'Count', n: 1 }], [['App opened from QR code', E.visits_qr], ['App opened from shared link', E.visits_link], ['Times students shared the app', E.shares],
+    ['Notices posted', K.notices], ['Feedback received', E.feedback], ['Question objections', E.objections], ['Message threads', E.messages], ['Support tickets', E.tickets]]
+    .map(x => `<tr><td>${x[0]}</td><td class="n">${dyN(x[1])}</td></tr>`))}
+  </div></div>
+
+  <div class="ft">Plan: ${dyE(I.plan || '—')} · status ${dyE(I.status || '—')} · valid until ${dyD(I.plan_expires_at)}. Mobile numbers are partly hidden for privacy. Generated by Dhyeodaya.</div>
+  </body></html>`;
+}
+function dyPlatformReportHtml(r){
+  const T = r.totals || {}, st = r.institutes_by_status || {};
+  const t = (k, v) => `<div class="tile"><span>${k}</span><b>${v}</b></div>`;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dhyeodaya — Platform report ${dyE(r.period.from)} to ${dyE(r.period.to)}</title><style>${DY_CSS.replace('A4 portrait', 'A4 landscape')}</style></head><body>
+  <div class="hd"><div><h1>Platform report</h1><div class="sub">All institutes · ${dyD(r.period.from)} – ${dyD(r.period.to)} · generated ${new Date(r.generated_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div></div>
+    <div class="brand">Dhyeodaya<small>Super admin</small></div></div>
+  <h2>At a glance</h2>
+  <div class="tiles" style="grid-template-columns:repeat(6,1fr)">${t('Institutes', dyN(T.institutes))}${t('New institutes', dyN(r.new_institutes))}${t('Students', dyN(T.students))}${t('New students', dyN(T.new_students))}
+    ${t('Active students', dyN(T.active))}${t('Live exams', dyN(T.live_exams))}${t('Mock / PYQ / CA tests', dyN(T.mock_tests))}${t('Practice sessions', dyN(T.practice))}
+    ${t('Challenge answers', dyN(T.challenge))}${t('Accounts deleted', dyN(T.deleted))}${t('Support tickets', dyN(T.tickets))}${t('Institutes by status', Object.entries(st).map(([k, v]) => `${dyE(k)} ${v}`).join(' · ') || '—')}</div>
+  <h2>Institutes</h2>
+  ${dyTable(['Institute', 'Status', 'Valid until', { t: 'Students', n: 1 }, { t: 'New', n: 1 }, { t: 'Active', n: 1 }, { t: 'Live exams', n: 1 }, { t: 'Mock/PYQ/CA', n: 1 }, { t: 'Practice', n: 1 }, { t: 'Challenge', n: 1 }, { t: 'Deleted', n: 1 }, { t: 'Tickets', n: 1 }, { t: 'Practice bank', n: 1 }],
+    (r.institutes || []).map(x => `<tr><td>${dyE(x.name)} <span class="muted">(${dyE(x.code)})</span></td><td>${dyE(x.status || '—')}</td><td>${dyD(x.plan_expires_at)}</td><td class="n">${dyN(x.students)}</td><td class="n">${dyN(x.new_students)}</td><td class="n">${dyN(x.active)}</td><td class="n">${dyN(x.live_exams)}</td><td class="n">${dyN(x.mock_tests)}</td><td class="n">${dyN(x.practice)}</td><td class="n">${dyN(x.challenge)}</td><td class="n">${dyN(x.deleted)}</td><td class="n">${dyN(x.tickets)}</td><td class="n">${dyN(x.questions)}</td></tr>`)
+    .concat([`<tr><td><b>Total</b></td><td></td><td></td><td class="n"><b>${dyN(T.students)}</b></td><td class="n"><b>${dyN(T.new_students)}</b></td><td class="n"><b>${dyN(T.active)}</b></td><td class="n"><b>${dyN(T.live_exams)}</b></td><td class="n"><b>${dyN(T.mock_tests)}</b></td><td class="n"><b>${dyN(T.practice)}</b></td><td class="n"><b>${dyN(T.challenge)}</b></td><td class="n"><b>${dyN(T.deleted)}</b></td><td class="n"><b>${dyN(T.tickets)}</b></td><td></td></tr>`]))}
+  <div class="ft">Active = took any live exam, mock / PYQ / current-affairs test, practice session or daily challenge in the period. Revenue is not part of this report (see Revenue). Generated by Dhyeodaya.</div>
+  </body></html>`;
+}
+// show the report in a preview frame; the Print button there saves it as PDF
+function dyShowReport(frame, html){
+  frame.style.display = 'block';
+  const doc = frame.contentWindow.document; doc.open(); doc.write(html); doc.close();
+  setTimeout(() => { try{ frame.style.height = Math.min(2400, doc.documentElement.scrollHeight + 20) + 'px'; }catch(_e){} }, 150);
+}
+function dyPrintFrame(frame){ try{ frame.contentWindow.focus(); frame.contentWindow.print(); }catch(_e){} }
+document.getElementById('srp-kind').addEventListener('change', e => { document.getElementById('srp-custom').style.display = e.target.value === 'custom' ? 'inline-flex' : 'none'; });
+function srpdates(){ return dyPeriod(document.getElementById('srp-kind').value, document.getElementById('srp-from').value, document.getElementById('srp-to').value); }
+$('reports-box').addEventListener('toggle', () => {
+  if (!$('reports-box').open) return;
+  const cur = $('srp-inst').value;
+  $('srp-inst').innerHTML = '<option value="">Choose an institute…</option>' +
+    institutes.slice().sort((a, b) => String(a.name).localeCompare(String(b.name))).map(i => `<option value="${esc(i.code)}">${esc(i.name)} (${esc(i.code)})</option>`).join('');
+  $('srp-inst').value = cur;
+});
+async function srpRun(kind){
+  const msg = $('srp-msg'); msg.textContent = '';
+  const [from, to] = srpdates();
+  if (!from || !to){ msg.textContent = 'Please choose both dates.'; return; }
+  const code = $('srp-inst').value;
+  if (kind === 'one' && !code){ msg.textContent = 'Please choose an institute.'; return; }
+  msg.textContent = 'Preparing the report...';
+  try{
+    const r = kind === 'all' ? await rpc('sa_web_platform_report', { ...creds(), p_from: from, p_to: to })
+                             : await rpc('sa_web_institute_report', { ...creds(), p_code: code, p_from: from, p_to: to });
+    if (handleAuthError(r)) return;
+    if (!r || !r.ok){ msg.textContent = (r && r.error) || 'Unable to prepare the report.'; return; }
+    dyShowReport($('srp-frame'), kind === 'all' ? dyPlatformReportHtml(r) : dyInstituteReportHtml(r));
+    $('btn-srp-print').classList.remove('hidden'); msg.textContent = '';
+  }catch(e){ msg.textContent = 'Connection error.'; }
+}
+$('btn-srp-all').addEventListener('click', () => srpRun('all'));
+$('btn-srp-one').addEventListener('click', () => srpRun('one'));
+$('btn-srp-print').addEventListener('click', () => dyPrintFrame($('srp-frame')));
 $('tk-list').addEventListener('click', (e) => { const it = e.target.closest('.tk'); if (it) openTicket(Number(it.dataset.id)); });
 $('tk-back').addEventListener('click', (e) => {
   e.preventDefault();
@@ -1904,10 +2081,10 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-11-06.3';
+const APP_VERSION = '2026-11-06.4';
 /* What's new: shown in the update banner, and once after the app updates. Newest first, keep a few.
    Add an entry here with every new APP_VERSION. */
-const APP_NOTES = /*NOTES*/[{"v": "2026-11-06.3", "date": "6 Nov 2026", "items": ["New section 'Deleted accounts': how many student accounts each institute has deleted, by students or admins."]},{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
+const APP_NOTES = /*NOTES*/[{"v": "2026-11-06.4", "date": "6 Nov 2026", "items": ["New 'Reports': an overall report of all institutes and a full report of any one institute, for any period, to print or save as PDF."]},{"v": "2026-11-06.3", "date": "6 Nov 2026", "items": ["New section 'Deleted accounts': how many student accounts each institute has deleted, by students or admins."]},{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
 const WN_KEY = 'dy_seen_version_superadmin';
 let updNewNotes = [];
 function wnParse(text){
