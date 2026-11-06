@@ -12,7 +12,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-1Dv+5VkUkbHhtrx7EBA2qquPsakgv9ar3N7FwgZojtU='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-qY1bDtyJYFqwoSQCGyeeLmXOMCU+AZhihBcJ5rt6Fy8='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Super Admin — Dhyeodaya</title>
@@ -1881,6 +1881,9 @@ const dyE = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g,
 const dyN = v => (v === null || v === undefined || v === '') ? '—' : Number(v).toLocaleString('en-IN');
 const dyP = v => (v === null || v === undefined || v === '') ? '—' : `${v}%`;
 const dyD = d => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : '—';
+// file name for "Save as PDF": the institute's name + report + period, without characters Windows/Android refuse
+const dyFile = (...parts) => parts.filter(Boolean).join(' - ').replace(/[\\/:*?"<>|#%]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 150);
+const dyDF = d => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) : '';
 const dyIso = d => { const z = new Date(d.getTime() + 330 * 60000); return z.toISOString().slice(0, 10); };   // date in India
 function dyPeriod(kind, from, to){
   const now = new Date(Date.now() + 330 * 60000), y = now.getUTCFullYear(), m = now.getUTCMonth(), d = now.getUTCDate();
@@ -1915,7 +1918,7 @@ function dyInstituteReportHtml(r){
   const t = (k, v) => `<div class="tile"><span>${k}</span><b>${v}</b></div>`;
   const testAttempts = ['mock', 'pyq', 'ca'].reduce((a, k) => a + ((T[k] || {}).attempts || 0), 0);
   const pct = (a, b) => b ? Math.round(1000 * a / b) / 10 : null;
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${dyE(I.name)} — Institute report ${dyE(r.period.from)} to ${dyE(r.period.to)}</title><style>${DY_CSS}</style></head><body>
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${dyE(dyFile(I.name, 'Institute Report', dyDF(r.period.from) + ' to ' + dyDF(r.period.to)))}</title><style>${DY_CSS}</style></head><body>
   <div class="hd"><div><h1>${dyE(I.name)} <span class="muted" style="font-size:14px">(${dyE(I.code)})</span></h1>
     <div class="sub">Institute report · ${dyD(r.period.from)} – ${dyD(r.period.to)} · generated ${new Date(r.generated_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div></div>
     <div class="brand">Dhyeodaya<small>तैयारी से सफलता तक</small></div></div>
@@ -1978,7 +1981,7 @@ function dyInstituteReportHtml(r){
 function dyPlatformReportHtml(r){
   const T = r.totals || {}, st = r.institutes_by_status || {};
   const t = (k, v) => `<div class="tile"><span>${k}</span><b>${v}</b></div>`;
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dhyeodaya — Platform report ${dyE(r.period.from)} to ${dyE(r.period.to)}</title><style>${DY_CSS.replace('A4 portrait', 'A4 landscape')}</style></head><body>
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${dyE(dyFile('Dhyeodaya', 'Platform Report (All Institutes)', dyDF(r.period.from) + ' to ' + dyDF(r.period.to)))}</title><style>${DY_CSS.replace('A4 portrait', 'A4 landscape')}</style></head><body>
   <div class="hd"><div><h1>Platform report</h1><div class="sub">All institutes · ${dyD(r.period.from)} – ${dyD(r.period.to)} · generated ${new Date(r.generated_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div></div>
     <div class="brand">Dhyeodaya<small>Super admin</small></div></div>
   <h2>At a glance</h2>
@@ -1998,7 +2001,17 @@ function dyShowReport(frame, html){
   const doc = frame.contentWindow.document; doc.open(); doc.write(html); doc.close();
   setTimeout(() => { try{ frame.style.height = Math.min(2400, doc.documentElement.scrollHeight + 20) + 'px'; }catch(_e){} }, 150);
 }
-function dyPrintFrame(frame){ try{ frame.contentWindow.focus(); frame.contentWindow.print(); }catch(_e){} }
+// browsers name the PDF after the page title, so the title is set to the report's name while printing
+function dyPrintFrame(frame){
+  let name = '';
+  try{ name = frame.contentWindow.document.title || ''; }catch(_e){}
+  const old = document.title;
+  if (name) document.title = name;
+  const restore = () => { document.title = old; window.removeEventListener('afterprint', restore); };
+  window.addEventListener('afterprint', restore);
+  setTimeout(restore, 60000);
+  try{ frame.contentWindow.focus(); frame.contentWindow.print(); }catch(_e){ restore(); }
+}
 document.getElementById('srp-kind').addEventListener('change', e => { document.getElementById('srp-custom').style.display = e.target.value === 'custom' ? 'inline-flex' : 'none'; });
 function srpdates(){ return dyPeriod(document.getElementById('srp-kind').value, document.getElementById('srp-from').value, document.getElementById('srp-to').value); }
 $('reports-box').addEventListener('toggle', () => {
@@ -2007,6 +2020,7 @@ $('reports-box').addEventListener('toggle', () => {
   $('srp-inst').innerHTML = '<option value="">Choose an institute…</option>' +
     institutes.slice().sort((a, b) => String(a.name).localeCompare(String(b.name))).map(i => `<option value="${esc(i.code)}">${esc(i.name)} (${esc(i.code)})</option>`).join('');
   $('srp-inst').value = cur;
+  srpLabels();
 });
 async function srpRun(kind){
   const msg = $('srp-msg'); msg.textContent = '';
@@ -2021,9 +2035,16 @@ async function srpRun(kind){
     if (handleAuthError(r)) return;
     if (!r || !r.ok){ msg.textContent = (r && r.error) || 'Unable to prepare the report.'; return; }
     dyShowReport($('srp-frame'), kind === 'all' ? dyPlatformReportHtml(r) : dyInstituteReportHtml(r));
+    $('btn-srp-print').textContent = kind === 'all' ? '🖨 Save overall report as PDF' : `🖨 Save ${(r.institute || {}).name || 'institute'} report as PDF`;
     $('btn-srp-print').classList.remove('hidden'); msg.textContent = '';
   }catch(e){ msg.textContent = 'Connection error.'; }
 }
+function srpLabels(){
+  const o = $('srp-inst').selectedOptions[0];
+  const name = o && o.value ? o.textContent.replace(/\s*\([^)]*\)\s*$/, '') : '';
+  $('btn-srp-one').textContent = name ? `🏫 ${name} report` : '🏫 Institute report';
+}
+$('srp-inst').addEventListener('change', srpLabels);
 $('btn-srp-all').addEventListener('click', () => srpRun('all'));
 $('btn-srp-one').addEventListener('click', () => srpRun('one'));
 $('btn-srp-print').addEventListener('click', () => dyPrintFrame($('srp-frame')));
@@ -2081,10 +2102,10 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-11-06.4';
+const APP_VERSION = '2026-11-06.6';
 /* What's new: shown in the update banner, and once after the app updates. Newest first, keep a few.
    Add an entry here with every new APP_VERSION. */
-const APP_NOTES = /*NOTES*/[{"v": "2026-11-06.4", "date": "6 Nov 2026", "items": ["New 'Reports': an overall report of all institutes and a full report of any one institute, for any period, to print or save as PDF."]},{"v": "2026-11-06.3", "date": "6 Nov 2026", "items": ["New section 'Deleted accounts': how many student accounts each institute has deleted, by students or admins."]},{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
+const APP_NOTES = /*NOTES*/[{"v": "2026-11-06.6", "date": "6 Nov 2026", "items": ["Reports: the institute report button shows the chosen institute's name."]},{"v": "2026-11-06.5", "date": "6 Nov 2026", "items": ["Reports are saved as PDF under the institute's name and the period (for example: Sunrise Academy - Institute Report - 01 Oct 2026 to 31 Oct 2026)."]},{"v": "2026-11-06.4", "date": "6 Nov 2026", "items": ["New 'Reports': an overall report of all institutes and a full report of any one institute, for any period, to print or save as PDF."]},{"v": "2026-11-06.3", "date": "6 Nov 2026", "items": ["New section 'Deleted accounts': how many student accounts each institute has deleted, by students or admins."]},{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
 const WN_KEY = 'dy_seen_version_superadmin';
 let updNewNotes = [];
 function wnParse(text){
