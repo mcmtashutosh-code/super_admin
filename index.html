@@ -12,7 +12,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-d6pxlq4QY8LPtSrpwrWdaINvcdSBVd/jpbsRGuax56Q='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ss0WKadas2iNWuJlmm60kcOMLao4p7ngcI2KCXxQ0pU='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Super Admin — Dhyeodaya</title>
@@ -1878,13 +1878,52 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-11-06.1';
+const APP_VERSION = '2026-11-06.2';
+/* What's new: shown in the update banner, and once after the app updates. Newest first, keep a few.
+   Add an entry here with every new APP_VERSION. */
+const APP_NOTES = /*NOTES*/[{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
+const WN_KEY = 'dy_seen_version_superadmin';
+let updNewNotes = [];
+function wnParse(text){
+  try{ const m = String(text).match(/\/\*NOTES\*\/([\s\S]*?)\/\*END\*\//); return m ? JSON.parse(m[1]) : []; }catch(_e){ return []; }
+}
+function wnEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function wnList(notes, max){
+  const items = [];
+  notes.forEach(n => (n.items || []).forEach(t => items.push(t)));
+  const shown = items.slice(0, max || 6);
+  return shown.length ? '<ul style="margin:6px 0 0; padding-left:18px; line-height:1.5;">' + shown.map(t => '<li>' + wnEsc(t) + '</li>').join('') + '</ul>' : '';
+}
+function wnText(notes){
+  const items = []; notes.forEach(n => (n.items || []).forEach(t => items.push('• ' + t)));
+  return items.slice(0, 6).join('\n');
+}
+// once after an update: "What's new in this version"
+function wnShowAfterUpdate(){
+  let seen = null;
+  try{ seen = localStorage.getItem(WN_KEY); localStorage.setItem(WN_KEY, APP_VERSION); }catch(_e){ return; }
+  if (seen === APP_VERSION) return;
+  const fresh = APP_NOTES.filter(n => n.v > (seen || '') && n.v <= APP_VERSION).slice(0, seen ? 10 : 1);
+  if (!fresh.length) return;
+  const d = document.createElement('div');
+  d.id = 'wn-card';
+  d.style.cssText = 'position:fixed; left:50%; transform:translateX(-50%); bottom:max(14px, env(safe-area-inset-bottom, 0px)); z-index:9998; background:#11203a; color:#fff; border:1px solid #16a085; border-radius:12px; padding:12px 14px; box-shadow:0 8px 24px rgba(0,0,0,.35); width:min(460px, calc(100% - 20px)); box-sizing:border-box; font-size:13.5px;';
+  d.innerHTML = '<div style="display:flex; align-items:center; gap:8px;"><b style="flex:1;">✨ What\'s new in this version</b>'
+    + '<button type="button" data-wn="ok" style="background:#16a085; color:#06231e; border:0; border-radius:8px; padding:6px 12px; font-weight:700; cursor:pointer;">OK</button></div>'
+    + wnList(fresh, 8);
+  d.addEventListener('click', e => { if (e.target.closest('[data-wn]')) d.remove(); });
+  document.body.appendChild(d);
+}
+setTimeout(wnShowAfterUpdate, 1500);
+
 let updShown = false;
 async function checkForUpdate(){
   try{
     const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) return false;
-    const m = (await res.text()).match(/const APP_VERSION = '([^']+)'/);
+    const txt = await res.text();
+    const m = txt.match(/const APP_VERSION = '([^']+)'/);
+    if (m && m[1] !== APP_VERSION) updNewNotes = wnParse(txt).filter(n => n.v > APP_VERSION);
     if (m && m[1] !== APP_VERSION){ showUpdateBanner(); return true; }
   }catch(_e){}
   return false;
@@ -1894,13 +1933,15 @@ function showUpdateBanner(){
   const d = document.createElement('div');
   d.id = 'upd-banner';
   d.style.cssText = 'position:fixed; left:50%; transform:translateX(-50%); top:max(10px, env(safe-area-inset-top, 0px)); z-index:9999; background:#11203a; color:#fff; border:1px solid #16a085; border-radius:12px; padding:10px 12px; display:flex; gap:10px; align-items:center; box-shadow:0 8px 24px rgba(0,0,0,.35); max-width:calc(100% - 20px); font-size:13.5px;';
+  d.style.flexWrap = 'wrap';
   d.innerHTML = '<span>🆕 A new version of this panel is available.</span>'
     + '<button type="button" data-u="go" style="background:#16a085; color:#06231e; border:0; border-radius:8px; padding:7px 12px; font-weight:700; cursor:pointer;">Update now</button>'
-    + '<button type="button" data-u="later" style="background:transparent; color:#aab7b8; border:0; cursor:pointer;">Later</button>';
+    + '<button type="button" data-u="later" style="background:transparent; color:#aab7b8; border:0; cursor:pointer;">Later</button>'
+    + (updNewNotes.length ? '<div style="flex-basis:100%; margin-top:4px; color:#d5f5ec;"><b>What\'s new:</b>' + wnList(updNewNotes) + '</div>' : '');
   d.addEventListener('click', (e) => {
     const b = e.target.closest('[data-u]'); if (!b) return;
     if (b.dataset.u === 'later'){ d.remove(); updShown = false; return; }
-    if (confirm('Load the new version now?\n\nYou will need to sign in again. Anything not yet saved on this screen will be lost.')){
+    if (confirm('Load the new version now?' + (updNewNotes.length ? '\n\nWhat\'s new:\n' + wnText(updNewNotes) : '') + '\n\nYou will need to sign in again. Anything not yet saved on this screen will be lost.')){
       location.replace(location.pathname + '?v=' + Date.now());
     }
   });
