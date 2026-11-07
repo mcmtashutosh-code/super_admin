@@ -12,7 +12,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-4mHKHLnwDrDKJiGglhfPPCfNfAbyOkUHLDSH4PB5wrA='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-kpTtIUxhbpDoEmWM5C5D+vJwLv6VC3gB2K8JUHfnSPw='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Super Admin — Dhyeodaya</title>
@@ -2142,10 +2142,10 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-11-07.4';
+const APP_VERSION = '2026-11-07.5';
 /* What's new: shown in the update banner, and once after the app updates. Newest first, keep a few.
    Add an entry here with every new APP_VERSION. */
-const APP_NOTES = /*NOTES*/[{"v": "2026-11-07.4", "date": "7 Nov 2026", "items": ["Festival effect: Dussehra (fire sparks and flaming arrows) and New Year (confetti and fireworks) added. Needs SQL 078."]},{"v": "2026-11-07.3", "date": "7 Nov 2026", "items": ["Festival effect: a separate greeting for institute admins (empty = same as students)."]},{"v": "2026-11-07.2", "date": "7 Nov 2026", "items": ["Festival effect now also shows in every institute admin panel, with a burst on every button."]},{"v": "2026-11-07.1", "date": "7 Nov 2026", "items": ["New 'Festival effect': turn on Diwali crackers or Holi colours for all students, with an optional last day and greeting."]},{"v": "2026-11-06.8", "date": "6 Nov 2026", "items": ["New 'Fees & renewals': which institute's fee is due, how much each has paid, and whose plan ends within 1, 3, 5 or 7 days, with WhatsApp reminder and Record payment buttons."]},{"v": "2026-11-06.7", "date": "6 Nov 2026", "items": ["Small fixes."]},{"v": "2026-11-06.5", "date": "6 Nov 2026", "items": ["Reports are saved as PDF under the institute's name and the period (for example: Sunrise Academy - Institute Report - 01 Oct 2026 to 31 Oct 2026)."]},{"v": "2026-11-06.4", "date": "6 Nov 2026", "items": ["New 'Reports': an overall report of all institutes and a full report of any one institute, for any period, to print or save as PDF."]},{"v": "2026-11-06.3", "date": "6 Nov 2026", "items": ["New section 'Deleted accounts': how many student accounts each institute has deleted, by students or admins."]},{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
+const APP_NOTES = /*NOTES*/[{"v": "2026-11-07.5", "date": "7 Nov 2026", "items": ["Dussehra effect: a bow in the corner now draws back and shoots burning arrows."]},{"v": "2026-11-07.4", "date": "7 Nov 2026", "items": ["Festival effect: Dussehra (fire sparks and flaming arrows) and New Year (confetti and fireworks) added. Needs SQL 078."]},{"v": "2026-11-07.3", "date": "7 Nov 2026", "items": ["Festival effect: a separate greeting for institute admins (empty = same as students)."]},{"v": "2026-11-07.2", "date": "7 Nov 2026", "items": ["Festival effect now also shows in every institute admin panel, with a burst on every button."]},{"v": "2026-11-07.1", "date": "7 Nov 2026", "items": ["New 'Festival effect': turn on Diwali crackers or Holi colours for all students, with an optional last day and greeting."]},{"v": "2026-11-06.8", "date": "6 Nov 2026", "items": ["New 'Fees & renewals': which institute's fee is due, how much each has paid, and whose plan ends within 1, 3, 5 or 7 days, with WhatsApp reminder and Record payment buttons."]},{"v": "2026-11-06.7", "date": "6 Nov 2026", "items": ["Small fixes."]},{"v": "2026-11-06.5", "date": "6 Nov 2026", "items": ["Reports are saved as PDF under the institute's name and the period (for example: Sunrise Academy - Institute Report - 01 Oct 2026 to 31 Oct 2026)."]},{"v": "2026-11-06.4", "date": "6 Nov 2026", "items": ["New 'Reports': an overall report of all institutes and a full report of any one institute, for any period, to print or save as PDF."]},{"v": "2026-11-06.3", "date": "6 Nov 2026", "items": ["New section 'Deleted accounts': how many student accounts each institute has deleted, by students or admins."]},{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
 const WN_KEY = 'dy_seen_version_superadmin';
 let updNewNotes = [];
 function wnParse(text){
@@ -3969,7 +3969,7 @@ $('btn-fees-unlock').addEventListener('click', async () => {
 });
 $('fees-pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-fees-unlock').click(); });
 $('fees-box').addEventListener('toggle', () => { if ($('fees-box').open) feesLoad(); });
-/* ---------------- FESTIVAL EFFECT ENGINE (Diwali / Holi / Dussehra / New Year) ----------------
+/* ---------------- FESTIVAL EFFECT ENGINE (Diwali / Holi / Dussehra bow and arrows / New Year) ----------------
    Draws on a see-through canvas over the page; touches nothing else and ignores clicks. */
 const FX_MODES = {
   diwali:   { border: '#f2a007', msg: '🪔 Happy Diwali! Wishing you light and success.',
@@ -4016,6 +4016,19 @@ function fxDraw(ctx, p){
   else ctx.globalAlpha = p.tw ? a * (0.5 + 0.5 * Math.sin(p.age)) : a;
   ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.fill();
 }
+// an arrow in local coordinates, pointing right, its tip at tipX
+function fxArrow(ctx, tipX, len, dpr){
+  const tail = tipX - len;
+  ctx.strokeStyle = '#ead7ad'; ctx.lineWidth = 2 * dpr; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(tail, 0); ctx.lineTo(tipX - 5 * dpr, 0); ctx.stroke();
+  ctx.fillStyle = '#ffd23f';                                         // arrow head
+  ctx.beginPath(); ctx.moveTo(tipX + 2 * dpr, 0); ctx.lineTo(tipX - 7 * dpr, -4 * dpr); ctx.lineTo(tipX - 7 * dpr, 4 * dpr); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#ff4d4d'; ctx.lineWidth = 1.6 * dpr;            // feathers
+  for (const d of [0, 4 * dpr]){
+    ctx.beginPath(); ctx.moveTo(tail + d, 0); ctx.lineTo(tail + d - 4 * dpr, -4 * dpr);
+    ctx.moveTo(tail + d, 0); ctx.lineTo(tail + d - 4 * dpr, 4 * dpr); ctx.stroke();
+  }
+}
 function fxPlay(mode, message, ms, onStopClick){
   fxStop();
   const M = FX_MODES[mode]; if (!M) return;
@@ -4046,6 +4059,25 @@ function fxPlay(mode, message, ms, onStopClick){
   const parts = [], rockets = [], puffs = [];
   fxEndAt = performance.now() + ms;
   let last = performance.now(), spawnT = 0, glow = 0;
+  // Dussehra: a bow in each lower corner; it draws back and shoots a burning arrow
+  const BL = Math.max(24, Math.min(40, innerWidth * 0.08)) * dpr, AL = BL * 1.35;
+  const bows = mode === 'dussehra' ? [1, -1].map(s => ({ s, pull: 0, drawing: false, loaded: true, ang: s > 0 ? -1.05 : -Math.PI + 1.05 })) : [];
+  const bowAt = b => ({ x: b.s > 0 ? Math.max(BL * 1.3, W() * 0.12) : W() - Math.max(BL * 1.3, W() * 0.12), y: H() - Math.max(BL * 1.6, H() * 0.1) });
+  function drawBow(b, alpha){
+    const p = bowAt(b), L = BL, nock = -L * 0.15 - b.pull * L * 0.75;
+    ctx.save(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = alpha;
+    ctx.translate(p.x, p.y); ctx.rotate(b.ang);
+    ctx.shadowColor = 'rgba(255,140,40,.8)'; ctx.shadowBlur = 8 * dpr;
+    ctx.strokeStyle = '#d99a3a'; ctx.lineWidth = 3.4 * dpr; ctx.lineCap = 'round';            // the bow
+    ctx.beginPath(); ctx.moveTo(-L * 0.15, -L); ctx.quadraticCurveTo(L * 0.75, 0, -L * 0.15, L); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#8b5a2b'; ctx.lineWidth = 5 * dpr;                                       // grip
+    ctx.beginPath(); ctx.moveTo(L * 0.3, -L * 0.14); ctx.lineTo(L * 0.3, L * 0.14); ctx.stroke();
+    ctx.strokeStyle = '#f5e6c8'; ctx.lineWidth = 1.2 * dpr;                                     // string
+    ctx.beginPath(); ctx.moveTo(-L * 0.15, -L); ctx.lineTo(nock, 0); ctx.lineTo(-L * 0.15, L); ctx.stroke();
+    if (b.loaded) fxArrow(ctx, nock + AL, AL, dpr);                                             // arrow on the string
+    ctx.restore();
+  }
 
   function burst(x, y, color, pal){
     const n = 46 + Math.floor(Math.random() * 24), sp = R(2.2, 3.6) * dpr, two = Math.random() < 0.35 ? pick(pal) : color;
@@ -4095,27 +4127,53 @@ function fxPlay(mode, message, ms, onStopClick){
         } else if (mode === 'holi'){
           splash(R(0.1, 0.9) * W(), R(0.15, 0.85) * H(), pick(COLS));
           spawnT = R(10, 20);
-        } else if (mode === 'dussehra'){                // a flaming arrow shot from a lower corner
-          const left = Math.random() < 0.5;
-          rockets.push({ x: left ? R(0, 0.15) * W() : R(0.85, 1) * W(), y: H() + 10, vy: -R(9, 12) * dpr, vx: (left ? 1 : -1) * R(3, 5) * dpr,
-                         top: R(0.15, 0.4) * H(), c: '#ffb347', pal: COLS, arrow: true });
-          spawnT = R(35, 60);
+        } else if (mode === 'dussehra'){                // one bow starts drawing back
+          const b = bows[Math.floor(Math.random() * 2)];
+          if (!b.drawing){ b.drawing = true; b.loaded = true; b.ang = b.s > 0 ? -R(0.85, 1.25) : -Math.PI + R(0.85, 1.25); }
+          spawnT = R(50, 80);
         } else {                                        // New Year: gold and silver fireworks
           rockets.push({ x: R(0.15, 0.85) * W(), y: H() + 10, vy: -R(8.5, 12) * dpr, vx: R(-0.6, 0.6) * dpr, top: R(0.15, 0.4) * H(), c: pick(NY_FW), pal: NY_FW });
           spawnT = R(30, 50);
         }
       }
     }
+    for (const b of bows){
+      if (b.drawing){
+        b.pull = Math.min(1, b.pull + 0.045 * dt);
+        if (b.pull >= 1){                               // release!
+          const p = bowAt(b), sp = R(12, 14.5) * dpr;
+          rockets.push({ x: p.x + Math.cos(b.ang) * AL * 0.4, y: p.y + Math.sin(b.ang) * AL * 0.4, vx: Math.cos(b.ang) * sp, vy: Math.sin(b.ang) * sp,
+                         top: R(0.12, 0.35) * H(), c: '#ffb347', pal: COLS, arrow: true });
+          b.drawing = false; b.loaded = false;
+        }
+      } else if (b.pull > 0){
+        b.pull = Math.max(0, b.pull - 0.4 * dt);         // the string snaps back
+      } else if (!b.loaded && !ending){
+        b.loaded = Math.random() < 0.03 * dt;           // a new arrow is placed after a moment
+      }
+      drawBow(b, Math.min(1, glow * 1.4));
+    }
+    if (mode === 'dussehra') ctx.globalCompositeOperation = 'lighter';
     for (let i = rockets.length - 1; i >= 0; i--){
       const k = rockets[i];
       k.x += k.vx * dt; k.y += k.vy * dt; k.vy += 0.12 * dpr * dt;
-      if (k.arrow){
-        const len = 7, sx = k.x - k.vx * len, sy = k.y - k.vy * len;
-        const g = ctx.createLinearGradient(sx, sy, k.x, k.y); g.addColorStop(0, 'rgba(255,106,0,0)'); g.addColorStop(1, '#ffe9a8');
-        ctx.strokeStyle = g; ctx.lineWidth = 2.4 * dpr; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(k.x, k.y); ctx.stroke();
+      if (k.arrow){                                     // a burning arrow in flight
+        ctx.save(); ctx.translate(k.x, k.y); ctx.rotate(Math.atan2(k.vy, k.vx));
+        const fl = ctx.createLinearGradient(-AL * 2.2, 0, -AL * 0.2, 0);
+        fl.addColorStop(0, 'rgba(255,106,0,0)'); fl.addColorStop(1, 'rgba(255,170,60,.85)');
+        ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = fl; ctx.lineWidth = 5 * dpr; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(-AL * 2.2, 0); ctx.lineTo(-AL * 0.2, 0); ctx.stroke();
+        const tg = ctx.createRadialGradient(0, 0, 0, 0, 0, 9 * dpr);
+        tg.addColorStop(0, 'rgba(255,233,168,.95)'); tg.addColorStop(1, 'rgba(255,106,0,0)');
+        ctx.fillStyle = tg; ctx.beginPath(); ctx.arc(0, 0, 9 * dpr, 0, Math.PI * 2); ctx.fill();
+        ctx.globalCompositeOperation = 'source-over'; fxArrow(ctx, 0, AL, dpr);
+        ctx.restore();
+        if (Math.random() < 0.6 * dt && parts.length < 600)   // sparks falling off it
+          parts.push({ k: 'ember', x: k.x, y: k.y, vx: R(-0.5, 0.5) * dpr, vy: R(-0.3, 0.6) * dpr, life: R(18, 30), age: 0, c: pick(COLS), s: R(0.8, 1.8) * dpr, ph: R(0, 6.3) });
+        ctx.globalCompositeOperation = 'lighter';
+      } else {
+        ctx.fillStyle = '#ffe9a8'; ctx.beginPath(); ctx.arc(k.x, k.y, 2.2 * dpr, 0, Math.PI * 2); ctx.fill();
       }
-      ctx.fillStyle = '#ffe9a8'; ctx.beginPath(); ctx.arc(k.x, k.y, 2.2 * dpr, 0, Math.PI * 2); ctx.fill();
       if (k.y <= k.top || k.vy >= 0){ burst(k.x, k.y, k.c, k.pal); rockets.splice(i, 1); }
     }
     for (let i = puffs.length - 1; i >= 0; i--){
