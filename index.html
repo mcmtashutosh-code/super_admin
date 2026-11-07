@@ -12,7 +12,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Eiatrue52skeatipsS+TZFhVCB9kFvylAtaXBE4IlWU='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-YYtI2CX3OULnyadUKfN6afLC0aais0BER2voTIvDRGE='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Super Admin — Dhyeodaya</title>
@@ -957,7 +957,7 @@
     <div class="card">
       <details id="fest-box">
         <summary>🎆 Festival effect</summary>
-        <p class="muted" style="margin-top:10px;">Shows Diwali crackers or Holi colours to students of every institute: when they open the app, after sign-in and now and then on calm screens. Never during a live exam, practice, mock test, challenge or result screen. Students can tap ✕ to stop it.</p>
+        <p class="muted" style="margin-top:10px;">Shows Diwali crackers or Holi colours to students and institute admins: when they open the app, after sign-in, now and then on calm screens, and a small burst on every button they tap. Never during a live exam, practice, mock test or running challenge. Anyone can tap ✕ to stop it.</p>
         <div id="fest-now" style="margin:8px 0; font-size:14px;"></div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
           <div><label>Effect</label>
@@ -2140,10 +2140,10 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-11-07.1';
+const APP_VERSION = '2026-11-07.2';
 /* What's new: shown in the update banner, and once after the app updates. Newest first, keep a few.
    Add an entry here with every new APP_VERSION. */
-const APP_NOTES = /*NOTES*/[{"v": "2026-11-07.1", "date": "7 Nov 2026", "items": ["New 'Festival effect': turn on Diwali crackers or Holi colours for all students, with an optional last day and greeting."]},{"v": "2026-11-06.8", "date": "6 Nov 2026", "items": ["New 'Fees & renewals': which institute's fee is due, how much each has paid, and whose plan ends within 1, 3, 5 or 7 days, with WhatsApp reminder and Record payment buttons."]},{"v": "2026-11-06.7", "date": "6 Nov 2026", "items": ["Small fixes."]},{"v": "2026-11-06.5", "date": "6 Nov 2026", "items": ["Reports are saved as PDF under the institute's name and the period (for example: Sunrise Academy - Institute Report - 01 Oct 2026 to 31 Oct 2026)."]},{"v": "2026-11-06.4", "date": "6 Nov 2026", "items": ["New 'Reports': an overall report of all institutes and a full report of any one institute, for any period, to print or save as PDF."]},{"v": "2026-11-06.3", "date": "6 Nov 2026", "items": ["New section 'Deleted accounts': how many student accounts each institute has deleted, by students or admins."]},{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
+const APP_NOTES = /*NOTES*/[{"v": "2026-11-07.2", "date": "7 Nov 2026", "items": ["Festival effect now also shows in every institute admin panel, with a burst on every button."]},{"v": "2026-11-07.1", "date": "7 Nov 2026", "items": ["New 'Festival effect': turn on Diwali crackers or Holi colours for all students, with an optional last day and greeting."]},{"v": "2026-11-06.8", "date": "6 Nov 2026", "items": ["New 'Fees & renewals': which institute's fee is due, how much each has paid, and whose plan ends within 1, 3, 5 or 7 days, with WhatsApp reminder and Record payment buttons."]},{"v": "2026-11-06.7", "date": "6 Nov 2026", "items": ["Small fixes."]},{"v": "2026-11-06.5", "date": "6 Nov 2026", "items": ["Reports are saved as PDF under the institute's name and the period (for example: Sunrise Academy - Institute Report - 01 Oct 2026 to 31 Oct 2026)."]},{"v": "2026-11-06.4", "date": "6 Nov 2026", "items": ["New 'Reports': an overall report of all institutes and a full report of any one institute, for any period, to print or save as PDF."]},{"v": "2026-11-06.3", "date": "6 Nov 2026", "items": ["New section 'Deleted accounts': how many student accounts each institute has deleted, by students or admins."]},{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
 const WN_KEY = 'dy_seen_version_superadmin';
 let updNewNotes = [];
 function wnParse(text){
@@ -4070,6 +4070,53 @@ function fxPlay(mode, message, ms, onStopClick){
   fxRaf = requestAnimationFrame(frame);
 }
 
+// a small burst where a button is tapped (crackers on Diwali, a puff of colour on Holi)
+function fxBurst(mode, x, y){
+  if (mode !== 'diwali' && mode !== 'holi') return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const c = document.createElement('canvas');
+  c.setAttribute('aria-hidden', 'true');
+  c.style.cssText = 'position:fixed; inset:0; width:100%; height:100%; z-index:9993; pointer-events:none;';
+  c.width = Math.floor(innerWidth * dpr); c.height = Math.floor(innerHeight * dpr);
+  document.body.appendChild(c);
+  const ctx = c.getContext('2d'), R = (a, b) => a + Math.random() * (b - a);
+  const COLS = mode === 'diwali' ? ['#ffd23f', '#ff8c42', '#ff4d4d', '#ff4fa3', '#7CFF6B', '#4ad8ff', '#ffffff']
+                                 : ['#ff4fa3', '#ffd23f', '#3ddc84', '#4aa3ff', '#ff8c42', '#a66cff'];
+  const cx = x * dpr, cy = y * dpr, parts = [];
+  const main = COLS[Math.floor(Math.random() * COLS.length)];
+  const n = mode === 'diwali' ? 30 : 26;
+  for (let i = 0; i < n; i++){
+    const a = (Math.PI * 2 * i) / n + R(-0.15, 0.15), v = R(1.6, 3.4) * dpr;
+    parts.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - (mode === 'holi' ? 0.6 * dpr : 0),
+                 c: i % 3 ? main : COLS[Math.floor(Math.random() * COLS.length)], s: R(1.3, mode === 'holi' ? 3.6 : 2.3) * dpr, life: R(28, 44), age: 0 });
+  }
+  const puff = mode === 'holi' ? { r: 0, max: R(36, 60) * dpr, c: main } : null;
+  let last = performance.now(), raf = 0, t = 0;
+  function frame(now){
+    const dt = Math.min(2.5, (now - last) / 16.7); last = now; t += dt;
+    ctx.clearRect(0, 0, c.width, c.height);
+    if (puff){
+      puff.r += (puff.max - puff.r) * 0.12 * dt;
+      const a = Math.max(0, 1 - t / 45) * 0.5;
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, puff.r);
+      g.addColorStop(0, puff.c + Math.round(a * 255).toString(16).padStart(2, '0')); g.addColorStop(1, puff.c + '00');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, puff.r, 0, Math.PI * 2); ctx.fill();
+    }
+    let alive = 0;
+    for (const p of parts){
+      p.age += dt; if (p.age >= p.life) continue; alive++;
+      p.vx *= 0.96; p.vy = p.vy * 0.96 + 0.06 * dpr * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+      ctx.globalAlpha = 1 - p.age / p.life; ctx.fillStyle = p.c;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (alive || t < 45) raf = requestAnimationFrame(frame); else c.remove();
+  }
+  raf = requestAnimationFrame(frame);
+  setTimeout(() => { cancelAnimationFrame(raf); c.remove(); }, 2500);   // safety
+}
+const FX_CLICK_SEL = 'button, .btn, .menu-card, .tab, .sec-btn, .filter-chip, .count-chip, .rev-tab, .sr-tab, .fees-chip, .pyq-chip, [role="button"]';
 function festShow(r){
   const set = r.setting || {}, live = r.live || { mode: 'off' };
   $('fest-mode').value = set.mode || 'off'; $('fest-until').value = set.until || ''; $('fest-msg').value = set.message || '';
@@ -4094,6 +4141,7 @@ $('btn-fest-preview').addEventListener('click', () => {
   const m = $('fest-mode').value;
   if (m === 'off'){ $('fest-err').textContent = 'Choose Diwali or Holi to preview.'; return; }
   $('fest-err').textContent = ''; fxPlay(m, $('fest-msg').value.trim(), 6000);
+  const r = $('btn-fest-preview').getBoundingClientRect(); fxBurst(m, r.left + r.width / 2, r.top + r.height / 2);
 });
 $('fees-box').addEventListener('click', (e) => {
   const f = e.target.closest('[data-f]');
