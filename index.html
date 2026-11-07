@@ -12,7 +12,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-PSsYntm5dEA2Oldc1XYCSvsKErq7wlYZnj6Sfpn7aXU='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Eiatrue52skeatipsS+TZFhVCB9kFvylAtaXBE4IlWU='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Super Admin — Dhyeodaya</title>
@@ -955,6 +955,25 @@
     </div>
 
     <div class="card">
+      <details id="fest-box">
+        <summary>🎆 Festival effect</summary>
+        <p class="muted" style="margin-top:10px;">Shows Diwali crackers or Holi colours to students of every institute: when they open the app, after sign-in and now and then on calm screens. Never during a live exam, practice, mock test, challenge or result screen. Students can tap ✕ to stop it.</p>
+        <div id="fest-now" style="margin:8px 0; font-size:14px;"></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+          <div><label>Effect</label>
+            <select class="sel" id="fest-mode"><option value="off">Off</option><option value="diwali">🪔 Diwali — crackers</option><option value="holi">🎨 Holi — colours</option></select></div>
+          <div><label>Last day (optional)</label><input type="date" id="fest-until"></div>
+          <div style="flex:1; min-width:220px;"><label>Greeting (optional)</label><input id="fest-msg" maxlength="120" placeholder="🪔 Happy Diwali! Wishing you light and success."></div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+          <button class="btn btn-primary" id="btn-fest-save" type="button">💾 Save</button>
+          <button class="btn" id="btn-fest-preview" type="button">👀 Preview here</button>
+        </div>
+        <div class="err" id="fest-err"></div>
+      </details>
+    </div>
+
+    <div class="card">
       <details id="fees-box">
         <summary>⏳ Fees &amp; renewals</summary>
         <div id="fees-locked" style="margin-top:12px;">
@@ -1581,7 +1600,7 @@ const SECTIONS = [
   ['account-box', '👤', 'My account'], ['create-box', '➕', 'Add institute'], ['move-box', '🔀', 'Transfer student'],
   ['support-box', '📨', 'Support'], ['report-box', '📊', 'Activity report'], ['rp-box', '💳', 'Record payment'],
   ['email-box', '✉️', 'Email institutes'], ['banner-box', '📢', 'Banner'], ['rev-box', '💰', 'Revenue'], ['audit-box', '🧾', 'Audit'],
-  ['terms-box', '📜', 'Terms'], ['fees-box', '⏳', 'Fees & renewals'], ['reports-box', '📄', 'Reports'], ['del-box', '🗑', 'Deleted accounts'], ['portal-card', '🔗', 'Portal URL']];
+  ['terms-box', '📜', 'Terms'], ['fees-box', '⏳', 'Fees & renewals'], ['fest-box', '🎆', 'Festival effect'], ['reports-box', '📄', 'Reports'], ['del-box', '🗑', 'Deleted accounts'], ['portal-card', '🔗', 'Portal URL']];
 function secCard(id){ const el = $(id); return id === 'portal-card' ? el : el.closest('.card'); }
 function openSection(id, force){
   const card = secCard(id), det = id === 'portal-card' ? null : $(id);
@@ -2121,10 +2140,10 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-11-06.8';
+const APP_VERSION = '2026-11-07.1';
 /* What's new: shown in the update banner, and once after the app updates. Newest first, keep a few.
    Add an entry here with every new APP_VERSION. */
-const APP_NOTES = /*NOTES*/[{"v": "2026-11-06.8", "date": "6 Nov 2026", "items": ["New 'Fees & renewals': which institute's fee is due, how much each has paid, and whose plan ends within 1, 3, 5 or 7 days, with WhatsApp reminder and Record payment buttons."]},{"v": "2026-11-06.7", "date": "6 Nov 2026", "items": ["Small fixes."]},{"v": "2026-11-06.5", "date": "6 Nov 2026", "items": ["Reports are saved as PDF under the institute's name and the period (for example: Sunrise Academy - Institute Report - 01 Oct 2026 to 31 Oct 2026)."]},{"v": "2026-11-06.4", "date": "6 Nov 2026", "items": ["New 'Reports': an overall report of all institutes and a full report of any one institute, for any period, to print or save as PDF."]},{"v": "2026-11-06.3", "date": "6 Nov 2026", "items": ["New section 'Deleted accounts': how many student accounts each institute has deleted, by students or admins."]},{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
+const APP_NOTES = /*NOTES*/[{"v": "2026-11-07.1", "date": "7 Nov 2026", "items": ["New 'Festival effect': turn on Diwali crackers or Holi colours for all students, with an optional last day and greeting."]},{"v": "2026-11-06.8", "date": "6 Nov 2026", "items": ["New 'Fees & renewals': which institute's fee is due, how much each has paid, and whose plan ends within 1, 3, 5 or 7 days, with WhatsApp reminder and Record payment buttons."]},{"v": "2026-11-06.7", "date": "6 Nov 2026", "items": ["Small fixes."]},{"v": "2026-11-06.5", "date": "6 Nov 2026", "items": ["Reports are saved as PDF under the institute's name and the period (for example: Sunrise Academy - Institute Report - 01 Oct 2026 to 31 Oct 2026)."]},{"v": "2026-11-06.4", "date": "6 Nov 2026", "items": ["New 'Reports': an overall report of all institutes and a full report of any one institute, for any period, to print or save as PDF."]},{"v": "2026-11-06.3", "date": "6 Nov 2026", "items": ["New section 'Deleted accounts': how many student accounts each institute has deleted, by students or admins."]},{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
 const WN_KEY = 'dy_seen_version_superadmin';
 let updNewNotes = [];
 function wnParse(text){
@@ -3948,6 +3967,134 @@ $('btn-fees-unlock').addEventListener('click', async () => {
 });
 $('fees-pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-fees-unlock').click(); });
 $('fees-box').addEventListener('toggle', () => { if ($('fees-box').open) feesLoad(); });
+/* ---------------- FESTIVAL EFFECT ENGINE (Diwali crackers / Holi colours) ----------------
+   Draws on a see-through canvas over the page; touches nothing else and ignores clicks. */
+let fxCanvas = null, fxRaf = 0, fxEndAt = 0, fxChip = null;
+function fxStop(){
+  if (fxRaf) cancelAnimationFrame(fxRaf); fxRaf = 0;
+  if (fxCanvas){ fxCanvas.remove(); fxCanvas = null; }
+  if (fxChip){ fxChip.remove(); fxChip = null; }
+}
+function fxPlay(mode, message, ms, onStopClick){
+  fxStop();
+  if (mode !== 'diwali' && mode !== 'holi') return;
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // greeting chip (the only part that can be tapped: "✕" stops the effect)
+  fxChip = document.createElement('div');
+  fxChip.style.cssText = 'position:fixed; left:50%; transform:translateX(-50%); top:max(12px, env(safe-area-inset-top, 0px)); z-index:9992; background:rgba(17,32,58,.92); color:#fff; border:1px solid ' + (mode === 'diwali' ? '#f2a007' : '#ff4fa3') + '; border-radius:999px; padding:7px 8px 7px 14px; font-size:14px; font-weight:700; display:flex; align-items:center; gap:10px; box-shadow:0 6px 20px rgba(0,0,0,.35); max-width:calc(100% - 24px);';
+  const txt = document.createElement('span');
+  txt.textContent = message || (mode === 'diwali' ? '🪔 Happy Diwali! Wishing you light and success.' : '🎨 Happy Holi! May your life be full of colours.');
+  const x = document.createElement('button');
+  x.type = 'button'; x.textContent = '✕'; x.title = 'Stop';
+  x.style.cssText = 'background:transparent; border:0; color:#aab7b8; font-size:15px; cursor:pointer; padding:0 6px;';
+  x.addEventListener('click', () => { fxStop(); if (onStopClick) onStopClick(); });
+  fxChip.appendChild(txt); fxChip.appendChild(x);
+  document.body.appendChild(fxChip);
+  if (reduce){ setTimeout(() => { if (fxChip && !fxRaf){ fxChip.remove(); fxChip = null; } }, Math.max(3000, ms)); return; }
+
+  const c = document.createElement('canvas');
+  c.setAttribute('aria-hidden', 'true');
+  c.style.cssText = 'position:fixed; inset:0; width:100%; height:100%; z-index:9991; pointer-events:none;';
+  document.body.appendChild(c); fxCanvas = c;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const size = () => { c.width = Math.floor(innerWidth * dpr); c.height = Math.floor(innerHeight * dpr); };
+  size();
+  const ctx = c.getContext('2d');
+  const W = () => c.width, H = () => c.height, R = (a, b) => a + Math.random() * (b - a);
+  const parts = [], rockets = [], puffs = [];
+  const DIWALI = ['#ffd23f', '#ff8c42', '#ff4d4d', '#ff4fa3', '#7CFF6B', '#4ad8ff', '#ffffff', '#f2a007'];
+  const HOLI = ['#ff4fa3', '#ffd23f', '#3ddc84', '#4aa3ff', '#ff8c42', '#a66cff', '#ff3d6e', '#00c2b8'];
+  fxEndAt = performance.now() + ms;
+  let last = performance.now(), spawnT = 0;
+
+  function burst(x, y, color){
+    const n = 56 + Math.floor(Math.random() * 26), sp = R(2.6, 4.2) * dpr, two = Math.random() < 0.35 ? DIWALI[Math.floor(Math.random() * DIWALI.length)] : color;
+    for (let i = 0; i < n && parts.length < 650; i++){
+      const a = (Math.PI * 2 * i) / n + R(-0.05, 0.05), v = sp * R(0.55, 1.05);
+      parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: R(55, 85), age: 0, c: i % 2 ? color : two, s: R(1.4, 2.4) * dpr, tw: Math.random() < 0.3 });
+    }
+  }
+  function splash(x, y, color){            // Holi: a cloud of colour + thrown powder
+    puffs.push({ x, y, r: 0, max: R(110, 210) * dpr, c: color, age: 0, life: R(100, 150) });
+    for (let i = 0; i < 55 && parts.length < 700; i++){
+      const a = R(0, Math.PI * 2), v = R(1, 5.5) * dpr;
+      parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.2 * dpr, life: R(40, 75), age: 0, c: color, s: R(2, 4.5) * dpr, holi: true });
+    }
+  }
+  function frame(now){
+    const dt = Math.min(2.5, (now - last) / 16.7); last = now;
+    const ending = now > fxEndAt;
+    if (mode === 'diwali'){
+      ctx.globalCompositeOperation = 'destination-out'; ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(0, 0, W(), H());
+      ctx.globalCompositeOperation = 'lighter';
+    } else {
+      ctx.globalCompositeOperation = 'source-over'; ctx.clearRect(0, 0, W(), H());
+    }
+    spawnT -= dt;
+    if (!ending && spawnT <= 0){
+      if (mode === 'diwali'){
+        rockets.push({ x: R(0.12, 0.88) * W(), y: H() + 10, vy: -R(8.5, 12) * dpr, vx: R(-0.8, 0.8) * dpr, top: R(0.15, 0.45) * H(), c: DIWALI[Math.floor(Math.random() * DIWALI.length)] });
+        spawnT = R(10, 20);
+      } else {
+        splash(R(0.1, 0.9) * W(), R(0.15, 0.85) * H(), HOLI[Math.floor(Math.random() * HOLI.length)]);
+        spawnT = R(7, 14);
+      }
+    }
+    for (let i = rockets.length - 1; i >= 0; i--){
+      const k = rockets[i];
+      k.x += k.vx * dt; k.y += k.vy * dt; k.vy += 0.12 * dpr * dt;
+      ctx.fillStyle = '#ffe9a8'; ctx.beginPath(); ctx.arc(k.x, k.y, 2.2 * dpr, 0, Math.PI * 2); ctx.fill();
+      if (k.y <= k.top || k.vy >= 0){ burst(k.x, k.y, k.c); rockets.splice(i, 1); }
+    }
+    for (let i = puffs.length - 1; i >= 0; i--){
+      const p = puffs[i]; p.age += dt; p.r += (p.max - p.r) * 0.08 * dt;
+      const a = Math.max(0, 1 - p.age / p.life) * 0.62;
+      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      g.addColorStop(0, p.c + Math.round(a * 255).toString(16).padStart(2, '0')); g.addColorStop(1, p.c + '00');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+      if (p.age >= p.life) puffs.splice(i, 1);
+    }
+    for (let i = parts.length - 1; i >= 0; i--){
+      const p = parts[i]; p.age += dt;
+      p.vx *= 0.985; p.vy = p.vy * 0.985 + (p.holi ? 0.09 : 0.05) * dpr * dt;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      const a = Math.max(0, 1 - p.age / p.life);
+      if (a <= 0){ parts.splice(i, 1); continue; }
+      ctx.globalAlpha = p.tw ? a * (0.5 + 0.5 * Math.sin(p.age)) : a;
+      ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (ending && !rockets.length && !parts.length && !puffs.length){ fxStop(); return; }
+    fxRaf = requestAnimationFrame(frame);
+  }
+  fxRaf = requestAnimationFrame(frame);
+}
+
+function festShow(r){
+  const set = r.setting || {}, live = r.live || { mode: 'off' };
+  $('fest-mode').value = set.mode || 'off'; $('fest-until').value = set.until || ''; $('fest-msg').value = set.message || '';
+  $('fest-now').innerHTML = live.mode === 'off' ? 'Now: <b>Off</b> — students see no effect.'
+    : `Now: <b>${live.mode === 'diwali' ? '🪔 Diwali crackers' : '🎨 Holi colours'}</b> are ON for all students${live.until ? ' until ' + dmy(live.until) : ' (no end date)'}.`;
+}
+$('fest-box').addEventListener('toggle', async () => {
+  if (!$('fest-box').open){ fxStop(); return; }
+  $('fest-err').textContent = '';
+  try{ const r = await rpc('sa_web_festival_get', creds()); if (handleAuthError(r)) return; if (r && r.ok) festShow(r); }catch(e){ $('fest-err').textContent = 'Connection error.'; }
+});
+$('btn-fest-save').addEventListener('click', async () => {
+  $('fest-err').textContent = '';
+  try{
+    const r = await rpc('sa_web_festival_set', { ...creds(), p_mode: $('fest-mode').value, p_until: $('fest-until').value || null, p_message: $('fest-msg').value });
+    if (handleAuthError(r)) return;
+    if (r && r.ok){ festShow(r); toast($('fest-mode').value === 'off' ? 'Festival effect turned off.' : 'Festival effect is on for all students.', 'ok'); }
+    else $('fest-err').textContent = (r && r.error) || 'Unable to save.';
+  }catch(e){ $('fest-err').textContent = 'Connection error.'; }
+});
+$('btn-fest-preview').addEventListener('click', () => {
+  const m = $('fest-mode').value;
+  if (m === 'off'){ $('fest-err').textContent = 'Choose Diwali or Holi to preview.'; return; }
+  $('fest-err').textContent = ''; fxPlay(m, $('fest-msg').value.trim(), 6000);
+});
 $('fees-box').addEventListener('click', (e) => {
   const f = e.target.closest('[data-f]');
   if (f){ feesFilter = f.dataset.f; feesRender(); return; }
