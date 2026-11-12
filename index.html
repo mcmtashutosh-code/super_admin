@@ -12,7 +12,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ERrV6bKRJP4DOQZlusBdE/fAB7pY8TOld47zW3gxeaY='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-PkkQ+63fUOWSkdjGz6w8MGR3LcFqw0hJ2aE7wCCvXIw='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://iyzujwixwfydmkzmhrxo.supabase.co; media-src 'self' blob: https:; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Super Admin — Dhyeodaya</title>
@@ -2142,10 +2142,10 @@ $('btn-tk-status').addEventListener('click', async () => {
 /* ---------------- NEW VERSION CHECK ----------------
    "Refresh" reloads data only. When a new file is uploaded to GitHub, this
    notices it (by APP_VERSION) and offers to load the new version. */
-const APP_VERSION = '2026-11-12.1';
+const APP_VERSION = '2026-11-12.3';
 /* What's new: shown in the update banner, and once after the app updates. Newest first, keep a few.
    Add an entry here with every new APP_VERSION. */
-const APP_NOTES = /*NOTES*/[{"v": "2026-11-12.1", "date": "12 Nov 2026", "items": ["Festival effect: Chhath Puja added (rising sun over the ghat, floating diyas). Needs SQL 082."]},{"v": "2026-11-07.5", "date": "7 Nov 2026", "items": ["Dussehra effect: a bow in the corner now draws back and shoots burning arrows."]},{"v": "2026-11-07.4", "date": "7 Nov 2026", "items": ["Festival effect: Dussehra (fire sparks and flaming arrows) and New Year (confetti and fireworks) added. Needs SQL 078."]},{"v": "2026-11-07.3", "date": "7 Nov 2026", "items": ["Festival effect: a separate greeting for institute admins (empty = same as students)."]},{"v": "2026-11-07.2", "date": "7 Nov 2026", "items": ["Festival effect now also shows in every institute admin panel, with a burst on every button."]},{"v": "2026-11-07.1", "date": "7 Nov 2026", "items": ["New 'Festival effect': turn on Diwali crackers or Holi colours for all students, with an optional last day and greeting."]},{"v": "2026-11-06.8", "date": "6 Nov 2026", "items": ["New 'Fees & renewals': which institute's fee is due, how much each has paid, and whose plan ends within 1, 3, 5 or 7 days, with WhatsApp reminder and Record payment buttons."]},{"v": "2026-11-06.7", "date": "6 Nov 2026", "items": ["Small fixes."]},{"v": "2026-11-06.5", "date": "6 Nov 2026", "items": ["Reports are saved as PDF under the institute's name and the period (for example: Sunrise Academy - Institute Report - 01 Oct 2026 to 31 Oct 2026)."]},{"v": "2026-11-06.4", "date": "6 Nov 2026", "items": ["New 'Reports': an overall report of all institutes and a full report of any one institute, for any period, to print or save as PDF."]},{"v": "2026-11-06.3", "date": "6 Nov 2026", "items": ["New section 'Deleted accounts': how many student accounts each institute has deleted, by students or admins."]},{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
+const APP_NOTES = /*NOTES*/[{"v": "2026-11-12.3", "date": "12 Nov 2026", "items": ["Chhath effect: the soop has been removed; the rising sun and floating diyas stay."]},{"v": "2026-11-12.2", "date": "12 Nov 2026", "items": ["Chhath effect: the sun now rises from the water, getting smaller as it climbs and fading at the top; diyas float along with the water."]},{"v": "2026-11-12.1", "date": "12 Nov 2026", "items": ["Festival effect: Chhath Puja added (rising sun over the ghat, floating diyas). Needs SQL 082."]},{"v": "2026-11-07.5", "date": "7 Nov 2026", "items": ["Dussehra effect: a bow in the corner now draws back and shoots burning arrows."]},{"v": "2026-11-07.4", "date": "7 Nov 2026", "items": ["Festival effect: Dussehra (fire sparks and flaming arrows) and New Year (confetti and fireworks) added. Needs SQL 078."]},{"v": "2026-11-07.3", "date": "7 Nov 2026", "items": ["Festival effect: a separate greeting for institute admins (empty = same as students)."]},{"v": "2026-11-07.2", "date": "7 Nov 2026", "items": ["Festival effect now also shows in every institute admin panel, with a burst on every button."]},{"v": "2026-11-07.1", "date": "7 Nov 2026", "items": ["New 'Festival effect': turn on Diwali crackers or Holi colours for all students, with an optional last day and greeting."]},{"v": "2026-11-06.8", "date": "6 Nov 2026", "items": ["New 'Fees & renewals': which institute's fee is due, how much each has paid, and whose plan ends within 1, 3, 5 or 7 days, with WhatsApp reminder and Record payment buttons."]},{"v": "2026-11-06.7", "date": "6 Nov 2026", "items": ["Small fixes."]},{"v": "2026-11-06.5", "date": "6 Nov 2026", "items": ["Reports are saved as PDF under the institute's name and the period (for example: Sunrise Academy - Institute Report - 01 Oct 2026 to 31 Oct 2026)."]},{"v": "2026-11-06.4", "date": "6 Nov 2026", "items": ["New 'Reports': an overall report of all institutes and a full report of any one institute, for any period, to print or save as PDF."]},{"v": "2026-11-06.3", "date": "6 Nov 2026", "items": ["New section 'Deleted accounts': how many student accounts each institute has deleted, by students or admins."]},{"v": "2026-11-06.2", "date": "6 Nov 2026", "items": ["You will now see what is new whenever the panel is updated."]}, {"v": "2026-11-06.1", "date": "6 Nov 2026", "items": ["Security update: the panel only runs its own code; database access tightened.", "Broken institute logos are hidden automatically."]}]/*END*/;
 const WN_KEY = 'dy_seen_version_superadmin';
 let updNewNotes = [];
 function wnParse(text){
@@ -4052,6 +4052,7 @@ function fxArrow(ctx, tipX, len, dpr){
 function fxPlay(mode, message, ms, onStopClick){
   fxStop();
   const M = FX_MODES[mode]; if (!M) return;
+  if (mode === 'chhath') ms = Math.max(ms, 9000);   // time for the sun to climb all the way up
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   // greeting chip (the only part that can be tapped: "✕" stops the effect)
   fxChip = document.createElement('div');
@@ -4080,9 +4081,10 @@ function fxPlay(mode, message, ms, onStopClick){
   fxEndAt = performance.now() + ms;
   let last = performance.now(), spawnT = 0, glow = 0, tt = 0;
   // Chhath: the sun rising over the ghat, its light on the water and diyas floating on it
-  const nDiya = Math.max(4, Math.min(8, Math.round(innerWidth / 110)));
+  const nDiya = Math.max(4, Math.min(7, Math.round(innerWidth / 120)));
   const diyas = mode === 'chhath' ? Array.from({ length: nDiya }, (_, i) => ({
-    x: (i + 0.5) / nDiya, dx: R(-0.00025, 0.00025), ph: R(0, 6.3), s: R(7, 10) })) : [];
+    x: (i + R(0.1, 0.9)) / nDiya, v: R(0.0016, 0.0026), lane: R(0.25, 0.75), ph: R(0, 6.3), s: R(7, 10) })) : [];
+  const t0 = performance.now();
   // Dussehra: a bow in each lower corner; it draws back and shoots a burning arrow
   const BL = Math.max(24, Math.min(40, innerWidth * 0.08)) * dpr, AL = BL * 1.35;
   const bows = mode === 'dussehra' ? [1, -1].map(s => ({ s, pull: 0, drawing: false, loaded: true, ang: s > 0 ? -1.05 : -Math.PI + 1.05 })) : [];
@@ -4136,36 +4138,50 @@ function fxPlay(mode, message, ms, onStopClick){
     }
     if (mode === 'chhath'){
       tt += dt; glow += ((ending ? 0 : 1) - glow) * 0.03 * dt;
-      const wl = H() * 0.84, sunR = Math.min(W(), H()) * 0.13, sx = W() / 2, sy = wl + sunR * 0.55 - glow * sunR * 0.9;
+      const wl = H() * 0.84, base = Math.min(W(), H()) * 0.13, sx = W() / 2;
+      const p = Math.min(1, (now - t0) / Math.max(1500, ms)), e = (1 - Math.cos(Math.PI * p)) / 2;   // 0 → 1, eased
+      const sunR = base * (1.25 - 0.95 * e);                               // big at the horizon, small at the top
+      const sy = (wl + sunR * 0.6) - e * ((wl + sunR * 0.6) - H() * 0.07);
+      const sunA = glow * (p < 0.8 ? 1 : Math.max(0, (1 - p) / 0.2));     // fades away at the top
+      const low = 1 - e;                                                   // how near the water the sun still is
       ctx.save(); ctx.globalCompositeOperation = 'source-over';
-      const sky = ctx.createLinearGradient(0, wl, 0, H() * 0.45);           // warm dawn sky
-      sky.addColorStop(0, 'rgba(255,140,40,' + (0.32 * glow).toFixed(3) + ')'); sky.addColorStop(1, 'rgba(255,140,40,0)');
-      ctx.fillStyle = sky; ctx.fillRect(0, H() * 0.45, W(), wl - H() * 0.45);
-      ctx.globalCompositeOperation = 'lighter';                             // slow turning rays
-      for (let i = 0; i < 14; i++){
-        const a = -Math.PI + (Math.PI * (i + 0.5)) / 14 + Math.sin(tt * 0.01) * 0.05;
-        ctx.strokeStyle = 'rgba(255,200,90,' + (0.13 * glow).toFixed(3) + ')'; ctx.lineWidth = sunR * 0.22; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(sx + Math.cos(a) * sunR * 1.25, sy + Math.sin(a) * sunR * 1.25);
-        ctx.lineTo(sx + Math.cos(a) * sunR * 3.2, sy + Math.sin(a) * sunR * 3.2); ctx.stroke();
+      const sky = ctx.createLinearGradient(0, wl, 0, H() * 0.4);           // warm dawn sky, softer as the sun climbs
+      sky.addColorStop(0, 'rgba(255,140,40,' + (0.32 * glow * (0.35 + 0.65 * low)).toFixed(3) + ')'); sky.addColorStop(1, 'rgba(255,140,40,0)');
+      ctx.fillStyle = sky; ctx.fillRect(0, H() * 0.4, W(), wl - H() * 0.4);
+      if (sunA > 0.01){
+        ctx.globalCompositeOperation = 'lighter';                          // turning rays
+        for (let i = 0; i < 16; i++){
+          const ang = (Math.PI * 2 * i) / 16 + tt * 0.004;
+          ctx.strokeStyle = 'rgba(255,200,90,' + (0.13 * sunA).toFixed(3) + ')'; ctx.lineWidth = sunR * 0.2; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(sx + Math.cos(ang) * sunR * 1.3, sy + Math.sin(ang) * sunR * 1.3);
+          ctx.lineTo(sx + Math.cos(ang) * sunR * 2.7, sy + Math.sin(ang) * sunR * 2.7); ctx.stroke();
+        }
+        const sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, sunR * 1.9);  // the sun
+        sg.addColorStop(0, 'rgba(255,243,176,' + (0.95 * sunA).toFixed(3) + ')'); sg.addColorStop(0.45, 'rgba(255,170,50,' + (0.85 * sunA).toFixed(3) + ')');
+        sg.addColorStop(0.55, 'rgba(255,122,26,' + (0.35 * sunA).toFixed(3) + ')'); sg.addColorStop(1, 'rgba(255,122,26,0)');
+        ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(sx, sy, sunR * 1.9, 0, Math.PI * 2); ctx.fill();
       }
-      const sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, sunR * 1.9);    // the sun
-      sg.addColorStop(0, 'rgba(255,243,176,' + (0.95 * glow).toFixed(3) + ')'); sg.addColorStop(0.45, 'rgba(255,170,50,' + (0.85 * glow).toFixed(3) + ')');
-      sg.addColorStop(0.55, 'rgba(255,122,26,' + (0.35 * glow).toFixed(3) + ')'); sg.addColorStop(1, 'rgba(255,122,26,0)');
-      ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(sx, sy, sunR * 1.9, 0, Math.PI * 2); ctx.fill();
       ctx.globalCompositeOperation = 'source-over';                         // the water
       const wg = ctx.createLinearGradient(0, wl, 0, H());
       wg.addColorStop(0, 'rgba(30,60,110,' + (0.55 * glow).toFixed(3) + ')'); wg.addColorStop(1, 'rgba(15,30,60,' + (0.7 * glow).toFixed(3) + ')');
       ctx.fillStyle = wg; ctx.fillRect(0, wl, W(), H() - wl);
-      ctx.globalCompositeOperation = 'lighter';                             // sunlight on the water
+      ctx.globalCompositeOperation = 'lighter';                             // sunlight on the water, fading as it climbs
       for (let k = 0; k < 9; k++){
-        const yy = wl + (k + 1) * (H() - wl) / 10, w = sunR * (1.6 - k * 0.1) * (0.8 + 0.2 * Math.sin(tt * 0.12 + k * 1.7));
-        ctx.strokeStyle = 'rgba(255,190,80,' + ((0.5 - k * 0.04) * glow).toFixed(3) + ')'; ctx.lineWidth = 2 * dpr;
+        const yy = wl + (k + 1) * (H() - wl) / 10, w = base * (1.5 - k * 0.1) * (0.8 + 0.2 * Math.sin(tt * 0.12 + k * 1.7)) * (0.4 + 0.6 * low);
+        ctx.strokeStyle = 'rgba(255,190,80,' + ((0.5 - k * 0.04) * sunA * (0.3 + 0.7 * low)).toFixed(3) + ')'; ctx.lineWidth = 2 * dpr;
         ctx.beginPath(); ctx.moveTo(sx - w + Math.sin(tt * 0.07 + k) * 6 * dpr, yy); ctx.lineTo(sx + w + Math.sin(tt * 0.07 + k) * 6 * dpr, yy); ctx.stroke();
       }
       ctx.restore();
-      for (const d of diyas){                                               // floating diyas
-        d.x += d.dx * dt; if (d.x < 0.03 || d.x > 0.97) d.dx = -d.dx;
-        fxDiya(ctx, d.x * W(), wl + (H() - wl) * 0.35 + Math.sin(tt * 0.05 + d.ph) * 2.5 * dpr, d.s * dpr, Math.min(1, glow * 1.3), tt);
+      for (const d of diyas){                                               // diyas carried along by the water
+        d.x += d.v * dt; if (d.x > 1.06) d.x = -0.06;
+        const dx = d.x * W(), dy = wl + (H() - wl) * d.lane + Math.sin(tt * 0.08 + d.ph) * 3 * dpr;
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';               // ripples left behind
+        for (let q = 1; q <= 3; q++){
+          ctx.strokeStyle = 'rgba(255,200,120,' + (0.22 * glow / q).toFixed(3) + ')'; ctx.lineWidth = 1.2 * dpr;
+          ctx.beginPath(); ctx.ellipse(dx - q * 9 * dpr, dy + 2 * dpr, d.s * dpr * (0.8 + q * 0.35), 1.6 * dpr * q, 0, 0, Math.PI * 2); ctx.stroke();
+        }
+        ctx.restore();
+        fxDiya(ctx, dx, dy, d.s * dpr, Math.min(1, glow * 1.3), tt);
       }
       ctx.globalCompositeOperation = 'lighter';
     }
